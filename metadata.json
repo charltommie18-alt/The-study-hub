@@ -1,0 +1,6 @@
+{
+  "name": "The Study Hub",
+  "description": "An all-in-one AI study companion with automated note summaries, instant flashcard generators, adaptive quizzes, focus Pomodoro timer with ambient sounds, and an interactive AI study tutor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

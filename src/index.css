@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F9F7F2;
+    color: #3C3C3B;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  body.dark, html.dark body {
+    background-color: #121613;
+    color: #F4F1EA;
+    color-scheme: dark;
+  }
+
+  h1, h2, h3, h4, .font-serif {
+    font-family: 'Newsreader', Georgia, Cambria, 'Times New Roman', Times, serif;
+  }
+}
+
+/* Custom scrollbar for Natural Tones design theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F2EFE9;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9D1C7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8C857A;
+}
+
+/* Natural Tones High-Contrast Dark Mode Overrides for Late-Night Study Sessions */
+html.dark ::-webkit-scrollbar-track, body.dark ::-webkit-scrollbar-track {
+  background: #181E19;
+}
+html.dark ::-webkit-scrollbar-thumb, body.dark ::-webkit-scrollbar-thumb {
+  background: #364438;
+}
+html.dark ::-webkit-scrollbar-thumb:hover, body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5A6D5B;
+}
+
+html.dark header, body.dark header {
+  background-color: rgba(24, 30, 25, 0.95) !important;
+  border-color: #323E34 !important;
+  color: #F4F1EA !important;
+}
+
+html.dark .bg-white, body.dark .bg-white {
+  background-color: #1C231E !important;
+  color: #F4F1EA !important;
+}
+
+html.dark .bg-\[\#F9F7F2\], body.dark .bg-\[\#F9F7F2\] {
+  background-color: #161B17 !important;
+}
+
+html.dark .bg-\[\#F2EFE9\], body.dark .bg-\[\#F2EFE9\] {
+  background-color: #212A23 !important;
+}
+
+html.dark .bg-\[\#EBE7DF\], body.dark .bg-\[\#EBE7DF\] {
+  background-color: #181E19 !important;
+}
+
+html.dark .bg-\[\#E2EFE3\], body.dark .bg-\[\#E2EFE3\] {
+  background-color: #1E3321 !important;
+  color: #A3E6AB !important;
+}
+
+html.dark .text-\[\#2D362E\], body.dark .text-\[\#2D362E\] {
+  color: #F4F1EA !important;
+}
+
+html.dark .text-\[\#3C3C3B\], body.dark .text-\[\#3C3C3B\] {
+  color: #E6E1D8 !important;
+}
+
+html.dark .text-\[\#7A746B\], body.dark .text-\[\#7A746B\] {
+  color: #B5AEA3 !important;
+}
+
+html.dark .text-\[\#8C857A\], body.dark .text-\[\#8C857A\] {
+  color: #A39B90 !important;
+}
+
+html.dark .text-\[\#575047\], body.dark .text-\[\#575047\] {
+  color: #C2BBB0 !important;
+}
+
+html.dark .border-\[\#D9D1C7\], body.dark .border-\[\#D9D1C7\] {
+  border-color: #334035 !important;
+}
+
+html.dark .border-\[\#E8E2D8\], body.dark .border-\[\#E8E2D8\] {
+  border-color: #2D382F !important;
+}
+
+html.dark input, html.dark select, html.dark textarea,
+body.dark input, body.dark select, body.dark textarea {
+  background-color: #161B17 !important;
+  color: #F4F1EA !important;
+  border-color: #3B4A3E !important;
+}
+
