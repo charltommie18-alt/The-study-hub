@@ -1,21 +1,24 @@
-// Service Worker for The Study Hub - Offline Capability
-const CACHE_NAME = 'studyhub-cache-v1';
-const ASSETS_TO_CACHE = [
+// Service Worker for The Study Hub - PWA Offline Capability
+const CACHE_NAME = 'studyhub-cache-v2';
+const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon.svg'
 ];
 
-// Install event - cache core shell
+// 1. Install Event - Cache core app shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activate event - cleanup old caches
+// 2. Activate Event - Clean up stale cache versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,42 +33,33 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - Cache First, Network Fallback strategy for static assets
+// 3. Fetch Event - Stale-While-Revalidate Strategy for Assets, Network Fallback for API
 self.addEventListener('fetch', (event) => {
-  // Ignore API requests or non-GET requests for offline caching strategy
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+  const { request } = event;
+
+  // Skip non-GET requests or server API proxy endpoints
+  if (request.method !== 'GET' || request.url.includes('/api/')) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch fresh copy in background to keep cache updated
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    caches.match(request).then((cachedResponse) => {
+      const fetchPromise = fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
       }).catch(() => {
-        // Return offline index.html for navigation requests when completely offline
-        if (event.request.mode === 'navigate') {
+        // Fallback to cached index.html for navigation when completely offline
+        if (request.mode === 'navigate') {
           return caches.match('/index.html');
         }
       });
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

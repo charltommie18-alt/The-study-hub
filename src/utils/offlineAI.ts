@@ -43,14 +43,58 @@ export interface OfflineStudyPlan {
 }
 
 // 1. Offline Note Summarizer
-export function generateOfflineSummary(text: string, subjectName: string): OfflineSummaryResult {
+export function generateOfflineSummary(text: string, subjectName: string, langCode: string = 'af-ZA'): OfflineSummaryResult {
+  const isAf = langCode.startsWith('af') || langCode.toLowerCase().includes('afrikaans') || /\b(die|en|is|wat|hoe|verduidelik|bereken|stel|opsomming|vraag|antwoord|wette|selle|energie|deur|hierdie)\b/i.test(text);
+
   const sentences = text
     .split(/[.!?]+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 10);
 
   const words = text.split(/\s+/);
-  const titleWord = words[0] || 'Core Subject Material';
+  const titleWord = words[0] || (isAf ? 'Kernmateriaal' : 'Core Subject Material');
+
+  if (isAf) {
+    const title = `${subjectName || 'Studie'}: ${titleWord.replace(/[^a-zA-Z]/g, '')} Konsepoorsig (Vanlyn KI)`;
+    const overviewSentences = sentences.slice(0, 3).join('. ');
+    const summary = overviewSentences.length > 20 
+      ? `${overviewSentences}. [Ontleed via Vanlyn Afrikaanse KI-enjin]`
+      : `Omvattende studie-oorsig vir ${subjectName}. Dek noodsaaklike beginsels, definisies en aktiewe herroepingspunte.`;
+
+    const keyTakeaways = sentences.slice(0, 5).map((s, idx) => `Kernpunt ${idx + 1}: ${s}.`);
+    if (keyTakeaways.length === 0) {
+      keyTakeaways.push(
+        'Fokus eerstens op die bemeestering van fundamentele definisies.',
+        'Verbind kernbeginsels met werklike eksamentoepassings.',
+        'Oefen daagliks aktiewe herroeping met flitskaarte.'
+      );
+    }
+
+    const capitalizedWords = Array.from(new Set(text.match(/\b[A-Z][a-z]{3,}\b/g) || []));
+    const glossary = capitalizedWords.slice(0, 4).map((word) => ({
+      term: word,
+      definition: `Noodsaaklike konseptuele element in ${subjectName}-materiaal.`,
+    }));
+
+    if (glossary.length < 2) {
+      glossary.push(
+        { term: 'Kernmeganika', definition: 'Die fundamentele onderliggende reëls wat hierdie onderwerp beheer.' },
+        { term: 'Sleutelreël/Formule', definition: 'Kritiese analitiese standaard wat benodig word vir probleemoplossing.' }
+      );
+    }
+
+    return {
+      title,
+      summary,
+      keyTakeaways,
+      glossary,
+      studyTips: [
+        '⚡ Vanlyn Wenk: Toets jouself met die Flitskaarte-oortjie om aktiewe herroeping te versterk.',
+        '📖 Som elke afdeling in jou eie woorde op voor die eksamen.',
+        '⏱️ Koppel jou studie met 25 minute in die Fokusateljee.',
+      ],
+    };
+  }
 
   const title = `${subjectName || 'Study'}: ${titleWord.replace(/[^a-zA-Z]/g, '')} Concept Overview (Offline AI)`;
 
@@ -99,8 +143,11 @@ export function generateOfflineSummary(text: string, subjectName: string): Offli
 export function generateOfflineFlashcards(
   text: string,
   subjectName: string,
-  count: number = 5
+  count: number = 5,
+  langCode: string = 'af-ZA'
 ): OfflineFlashcard[] {
+  const isAf = langCode.startsWith('af') || langCode.toLowerCase().includes('afrikaans') || /\b(die|en|is|wat|hoe|verduidelik|bereken|stel|opsomming|vraag|antwoord|wette|selle|energie|deur|hierdie)\b/i.test(text);
+
   const sentences = text
     .split(/[.!?]+/)
     .map((s) => s.trim())
@@ -109,31 +156,33 @@ export function generateOfflineFlashcards(
   const cards: OfflineFlashcard[] = [];
 
   for (let i = 0; i < count; i++) {
-    const sentence = sentences[i % sentences.length] || `Core Principle ${i + 1} of ${subjectName}`;
+    const sentence = sentences[i % sentences.length] || (isAf ? `Kernbeginsel ${i + 1} van ${subjectName}` : `Core Principle ${i + 1} of ${subjectName}`);
     const words = sentence.split(' ');
     
-    let q = `What is the significance of "${words.slice(0, 3).join(' ')}..." in ${subjectName}?`;
+    let q = isAf 
+      ? `Wat is die betekenis van "${words.slice(0, 3).join(' ')}..." in ${subjectName}?`
+      : `What is the significance of "${words.slice(0, 3).join(' ')}..." in ${subjectName}?`;
     let a = sentence;
-    let hint = `Focus on key terminology from your notes.`;
+    let hint = isAf ? `Fokus op sleutelterminologie uit jou notas.` : `Focus on key terminology from your notes.`;
 
     if (i === 0) {
-      q = `Define the primary concept discussed in these ${subjectName} notes.`;
-      a = sentences[0] || `The main focus is understanding core mechanisms and definitions in ${subjectName}.`;
-      hint = `Think about the opening summary of the material.`;
+      q = isAf 
+        ? `Definieer die primêre konsep wat in hierdie ${subjectName}-notas bespreek word.`
+        : `Define the primary concept discussed in these ${subjectName} notes.`;
+      a = sentences[0] || (isAf ? `Die hooffokus is om kernmeganismes en definisies in ${subjectName} te verstaan.` : `The main focus is understanding core mechanisms and definitions in ${subjectName}.`);
+      hint = isAf ? `Dink aan die openingsopsomming van die materiaal.` : `Think about the opening summary of the material.`;
     } else if (i === 1) {
-      q = `How do key principles in ${subjectName} apply to practical problem solving?`;
-      a = sentences[1] || `They provide structured frameworks to analyze and solve exam questions.`;
-      hint = `Recall cause-and-effect relationships.`;
-    } else if (i === 2) {
-      q = `What common pitfall or trap should be avoided in ${subjectName}?`;
-      a = `Avoid confusing fundamental definitions with secondary edge cases; always verify formulas.`;
-      hint = `Check the core formulas and rules.`;
+      q = isAf
+        ? `Hoe word sleutelbeginsels in ${subjectName} toegepas op praktiese probleemoplossing?`
+        : `How do key principles in ${subjectName} apply to practical problem solving?`;
+      a = sentences[1] || (isAf ? `Hulle bied gestruktureerde raamwerke om eksamenvrae te ontleed en op te los.` : `They provide structured frameworks to analyze and solve exam questions.`);
+      hint = isAf ? `Onthou oorsaak-en-gevolg verhoudings.` : `Recall cause-and-effect relationships.`;
     }
 
     cards.push({
       question: q,
       answer: a,
-      category: subjectName || 'General',
+      category: subjectName || (isAf ? 'Algemeen' : 'General'),
       difficulty: i % 2 === 0 ? 'easy' : 'medium',
       hint,
     });
@@ -146,28 +195,47 @@ export function generateOfflineFlashcards(
 export function generateOfflineQuiz(
   text: string,
   subjectName: string,
-  count: number = 4
+  count: number = 4,
+  langCode: string = 'af-ZA'
 ): OfflineQuizQuestion[] {
-  const questions: OfflineQuizQuestion[] = [];
+  const isAf = langCode.startsWith('af') || langCode.toLowerCase().includes('afrikaans') || /\b(die|en|is|wat|hoe|verduidelik|bereken|stel|opsomming|vraag|antwoord|wette|selle|energie|deur|hierdie)\b/i.test(text);
 
+  const questions: OfflineQuizQuestion[] = [];
   const topics = text.split(/\s+/).filter((w) => w.length > 5);
-  const mainKeyword = topics[0] || subjectName || 'Core Material';
+  const mainKeyword = topics[0] || subjectName || (isAf ? 'Kernmateriaal' : 'Core Material');
 
   for (let i = 0; i < count; i++) {
-    questions.push({
-      id: `off-q-${Date.now()}-${i}`,
-      question: `[Offline Quiz Q${i + 1}] Which statement best describes the role of ${mainKeyword} in ${subjectName}?`,
-      options: [
-        `It serves as the foundational principle for analyzing key concepts.`,
-        `It is an outdated secondary theory rarely tested on exams.`,
-        `It operates completely independent of standard ${subjectName} rules.`,
-        `It only applies in laboratory conditions and is mathematically negligible.`
-      ],
-      correctAnswerIndex: 0,
-      explanation: `Statement A is correct because ${mainKeyword} represents the primary framework for ${subjectName}.`,
-      hint: `Consider which option emphasizes foundational principles.`,
-      difficulty: 'medium'
-    });
+    if (isAf) {
+      questions.push({
+        id: `off-q-${Date.now()}-${i}`,
+        question: `[Vanlyn Toets V${i + 1}] Watter stelling beskryf die rol van ${mainKeyword} in ${subjectName} die beste?`,
+        options: [
+          `Dit dien as die fundamentele beginsel vir die ontleding van sleutelbegrippe.`,
+          `Dit is 'n verouderde sekondêre teorie wat selde in eksamens gevra word.`,
+          `Dit funksioneer heeltemal onafhanklik van standaard ${subjectName}-reëls.`,
+          `Dit is slegs van toepassing onder laboratoriumtoestande en wiskundig weglaatbaar.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `Keuse A is korrek omdat ${mainKeyword} die primêre analitiese raamwerk vir ${subjectName} verteenwoordig.`,
+        hint: `Oorweeg watter opsie die grondbeginsels en korrekte toepassing beklemtoon.`,
+        difficulty: 'medium'
+      });
+    } else {
+      questions.push({
+        id: `off-q-${Date.now()}-${i}`,
+        question: `[Offline Quiz Q${i + 1}] Which statement best describes the role of ${mainKeyword} in ${subjectName}?`,
+        options: [
+          `It serves as the foundational principle for analyzing key concepts.`,
+          `It is an outdated secondary theory rarely tested on exams.`,
+          `It operates completely independent of standard ${subjectName} rules.`,
+          `It only applies in laboratory conditions and is mathematically negligible.`
+        ],
+        correctAnswerIndex: 0,
+        explanation: `Statement A is correct because ${mainKeyword} represents the primary framework for ${subjectName}.`,
+        hint: `Consider which option emphasizes foundational principles.`,
+        difficulty: 'medium'
+      });
+    }
   }
 
   return questions;
@@ -177,9 +245,41 @@ export function generateOfflineQuiz(
 export function generateOfflineTutorReply(
   userPrompt: string,
   subjectName: string,
-  persona: string = 'Socratic Mentor'
+  persona: string = 'Socratic Mentor',
+  langCode: string = 'af-ZA'
 ): OfflineTutorReply {
   const pLower = userPrompt.toLowerCase();
+  const isAf = langCode.startsWith('af') || langCode.toLowerCase().includes('afrikaans') || /\b(die|en|is|wat|hoe|verduidelik|eksamen|toets|wette|selle)\b/i.test(pLower);
+
+  if (isAf) {
+    let reply = `🤖 **Vanlyn Afrikaanse KI-Leermeester (${persona})**: \n\n`;
+    if (pLower.includes('verduidelik') || pLower.includes('wat is') || pLower.includes('explain') || pLower.includes('what is')) {
+      reply += `Uitstekende vraag! In **${subjectName}**, handel **${userPrompt}** oor die volgende sleutelbeginsels:\n\n` +
+        `• **Kern Definisie**: Die fundamentele meganisme en teorie onderliggend aan hierdie konsep.\n` +
+        `• **Belangrike Funksie**: Verbind kernkonsepte met praktiese wetenskaplike of wiskundige oplossings.\n` +
+        `• **Eksamenstrategie**: Onthou om altyd die korrekte terme en stappe duidelik uit te skryf vir volpunte in die eksamen.`;
+    } else if (pLower.includes('eksamen') || pLower.includes('toets') || pLower.includes('wenk') || pLower.includes('exam') || pLower.includes('tip')) {
+      reply += `🎯 **Hoë-Waarde Eksamenwenke vir ${subjectName}**:\n\n` +
+        `1. **Aktiewe Herroeping**: Moenie net notas lees nie; toets jouself gereeld met flitskaarte.\n` +
+        `2. **Presiese Woordeskat**: Memoriseer definisies presies soos in die KABV/IEB riglyne.\n` +
+        `3. **Fokus-Sessies**: Gebruik die Fokusateljee vir 25 minute van ononderbroke studie.`;
+    } else {
+      reply += `Ek ontleed jou vraag oor **${userPrompt}** vir **${subjectName}**.\n\n` +
+        `Hier is 'n gestruktureerde oorsig:\n` +
+        `• **Hoofbeginsel**: Identifiseer die kernveranderlikes en formules.\n` +
+        `• **Toepassing**: Pas dit toe op vorige vraestelle en modelmemo's.\n\n` +
+        `*(Vanlyn Plaaslike KI-modus. Koppel aan die internet vir lewendige Gemini wolk-analise).*`;
+    }
+
+    return {
+      reply,
+      suggestedFollowups: [
+        `Wys vir my 'n voorbeeldvraag vir ${subjectName}`,
+        `Hoe word hierdie konsep in eindeksamens gevra?`,
+        `Gee my 'n eenvoudige analogie in Afrikaans`
+      ]
+    };
+  }
 
   let reply = `🤖 **Offline AI Tutor (${persona})**: \n\n`;
 
@@ -214,9 +314,10 @@ export function generateOfflineTutorReply(
 export function generateOfflineTutorResponse(
   userPrompt: string,
   subjectName: string,
-  persona: string = 'Socratic Mentor'
+  persona: string = 'Socratic Mentor',
+  langCode: string = 'af-ZA'
 ) {
-  const res = generateOfflineTutorReply(userPrompt, subjectName, persona);
+  const res = generateOfflineTutorReply(userPrompt, subjectName, persona, langCode);
   return {
     text: res.reply,
     suggestedFollowups: res.suggestedFollowups,

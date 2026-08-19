@@ -8,3 +8,14 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// Register Service Worker for PWA Offline Functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((registration) => {
+      console.log('ServiceWorker registered successfully with scope: ', registration.scope);
+    }).catch((err) => {
+      console.warn('ServiceWorker registration failed: ', err);
+    });
+  });
+}

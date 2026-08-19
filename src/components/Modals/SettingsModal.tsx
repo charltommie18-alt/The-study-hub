@@ -18,6 +18,13 @@ import {
 import { GradeLevel, PushNotificationSettings } from '../../types';
 import { GRADE_CONFIGS } from '../../data/initialData';
 import { requestPushPermission } from '../../utils/notificationService';
+import { 
+  SUPPORTED_LANGUAGES, 
+  loadVoiceSettings, 
+  saveVoiceSettings, 
+  setVoiceGender,
+  getAvailableSystemVoices 
+} from '../../utils/multilingualSpeech';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -155,7 +162,115 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </select>
           </div>
 
-          {/* Section 3: Push Notifications & Peak Hours */}
+          {/* Section 3: AI Voice & Audio Narration Settings */}
+          <div className="p-4 bg-white dark:bg-[#161B17] border border-[#D9D1C7] dark:border-[#2E3B30] rounded-2xl space-y-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <Volume2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <h3 className="text-sm font-bold text-[#2D362E] dark:text-white flex items-center gap-1.5">
+                  <span>AI Voice & Afrikaans Engine</span>
+                  <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold rounded-md">
+                    Neural HD
+                  </span>
+                </h3>
+                <p className="text-xs text-[#7A746B] dark:text-[#A6C4A7]">
+                  Configure natural Afrikaans pronunciation, speed, and auto-speech.
+                </p>
+              </div>
+            </div>
+
+            {/* Voice Gender Switcher (Manlik / Vroulik) */}
+            <div className="pt-2 border-t border-[#E8E2D8] dark:border-[#263228] flex items-center justify-between">
+              <span className="text-xs font-medium text-[#2D362E] dark:text-[#F4F1EA]">Stemtipe (Stem-Geslag)</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setVoiceGender('male')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    loadVoiceSettings().voiceGender === 'male'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-[#F0ECE1] dark:bg-[#253026] text-[#5A6D5B] dark:text-[#A2B5A3] hover:bg-[#E2DDD0]'
+                  }`}
+                  title="Nuwe Manlike KI-Stem (Karel / Dawid - Charon HD)"
+                >
+                  <span>👨 Manlik</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVoiceGender('female')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    loadVoiceSettings().voiceGender === 'female'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-[#F0ECE1] dark:bg-[#253026] text-[#5A6D5B] dark:text-[#A2B5A3] hover:bg-[#E2DDD0]'
+                  }`}
+                  title="Vroulike KI-Stem (Sanet / Elsa / Kore)"
+                >
+                  <span>👩 Vroulik</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Voice Speed Selection */}
+            <div className="pt-2 border-t border-[#E8E2D8] dark:border-[#263228] flex items-center justify-between">
+              <span className="text-xs font-medium text-[#2D362E] dark:text-[#F4F1EA]">Default Narration Speed</span>
+              <div className="flex items-center gap-1">
+                {[0.75, 1.0, 1.25, 1.5].map((spd) => (
+                  <button
+                    key={spd}
+                    type="button"
+                    onClick={() => {
+                      saveVoiceSettings({ voiceSpeed: spd });
+                    }}
+                    className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                      loadVoiceSettings().voiceSpeed === spd
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-[#F0ECE1] dark:bg-[#253026] text-[#5A6D5B] dark:text-[#A2B5A3] hover:bg-[#E2DDD0]'
+                    }`}
+                  >
+                    {spd}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Default Voice Language & System Voice Selection */}
+            <div className="pt-2 border-t border-[#E8E2D8] dark:border-[#263228] flex items-center justify-between">
+              <span className="text-xs font-medium text-[#2D362E] dark:text-[#F4F1EA]">Preferred Voice Language</span>
+              <select
+                value={loadVoiceSettings().preferredLanguage}
+                onChange={(e) => {
+                  saveVoiceSettings({ preferredLanguage: e.target.value });
+                }}
+                className="bg-[#F9F7F2] dark:bg-[#1C231E] text-[#2D362E] dark:text-[#F4F1EA] border border-[#D9D1C7] dark:border-[#38483B] rounded-xl px-2 py-1 text-xs font-bold focus:outline-none"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.flag} {l.name} ({l.nativeName})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* System Voice Selection */}
+            <div className="pt-2 border-t border-[#E8E2D8] dark:border-[#263228] space-y-1">
+              <span className="text-xs font-medium text-[#2D362E] dark:text-[#F4F1EA] block">Preferred Voice & Engine</span>
+              <select
+                value={loadVoiceSettings().selectedVoiceURI || 'ai-neural-male-charon'}
+                onChange={(e) => {
+                  saveVoiceSettings({ selectedVoiceURI: e.target.value });
+                }}
+                className="w-full bg-[#F9F7F2] dark:bg-[#1C231E] text-[#2D362E] dark:text-[#F4F1EA] border border-[#D9D1C7] dark:border-[#38483B] rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none"
+              >
+                {getAvailableSystemVoices().map((v) => (
+                  <option key={v.voiceURI} value={v.voiceURI}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Section 4: Push Notifications & Peak Hours */}
           <div className="p-4 bg-white dark:bg-[#161B17] border border-[#D9D1C7] dark:border-[#2E3B30] rounded-2xl space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">

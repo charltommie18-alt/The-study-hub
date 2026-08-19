@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Note, Subject } from '../../types';
 import { generateOfflineSummary } from '../../utils/offlineAI';
 import { 
+  SUPPORTED_LANGUAGES, 
+  speakTextInLanguage, 
+  stopSpeech,
+  loadVoiceSettings
+} from '../../utils/multilingualSpeech';
+import { 
   Sparkles, 
   BookOpen, 
   CheckCircle2, 
@@ -18,7 +24,8 @@ import {
   MessageCircle,
   Mic,
   Volume2,
-  VolumeX
+  VolumeX,
+  Globe
 } from 'lucide-react';
 
 interface NotesSummarizerTabProps {
@@ -50,14 +57,16 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [isDictatingNotes, setIsDictatingNotes] = useState(false);
   const [isSpeakingSummary, setIsSpeakingSummary] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => loadVoiceSettings().preferredLanguage || 'af-ZA');
 
   const recognitionRef = useRef<any>(null);
+  const isDictatingRef = useRef<boolean>(false);
+  const baseTextRef = useRef<string>('');
 
   useEffect(() => {
     return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      stopSpeech();
+      isDictatingRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
@@ -65,7 +74,8 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
   }, []);
 
   const handleStartVoiceDictation = () => {
-    if (isDictatingNotes) {
+    if (isDictatingNotes || isDictatingRef.current) {
+      isDictatingRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
@@ -74,58 +84,89 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
     }
 
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in this browser version.');
+      alert('Speech recognition is not supported in this browser version. Please use Google Chrome or Microsoft Edge.');
       return;
     }
 
     try {
+      baseTextRef.current = inputText.trim();
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
+      recognition.lang = selectedLanguage || 'af-ZA';
+      recognition.continuous = true;
       recognition.interimResults = true;
+
+      isDictatingRef.current = true;
 
       recognition.onstart = () => setIsDictatingNotes(true);
 
       recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        let currentFinalAcc = '';
+        let currentInterim = '';
+
+        for (let i = 0; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            currentFinalAcc += item[0].transcript + ' ';
+          } else {
+            currentInterim += item[0].transcript;
+          }
         }
-        if (transcript) {
-          setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+
+        const combined = (currentFinalAcc + currentInterim).replace(/\s+/g, ' ').trim();
+        if (combined) {
+          const base = baseTextRef.current;
+          setInputText(base ? `${base} ${combined}` : combined);
         }
       };
 
-      recognition.onerror = () => setIsDictatingNotes(false);
-      recognition.onend = () => setIsDictatingNotes(false);
+      recognition.onerror = (err: any) => {
+        if (err?.error === 'not-allowed' || err?.error === 'service-not-allowed') {
+          isDictatingRef.current = false;
+          setIsDictatingNotes(false);
+        }
+      };
+
+      recognition.onend = () => {
+        if (isDictatingRef.current) {
+          setTimeout(() => {
+            if (isDictatingRef.current) {
+              try {
+                recognition.start();
+              } catch (e) {
+                console.warn('Dictation auto-restart failed:', e);
+              }
+            }
+          }, 150);
+          return;
+        }
+        setIsDictatingNotes(false);
+      };
 
       recognition.start();
     } catch (e) {
       console.warn('Speech recognition error:', e);
+      isDictatingRef.current = false;
       setIsDictatingNotes(false);
     }
   };
 
   const handleToggleReadSummary = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-
     if (isSpeakingSummary) {
-      window.speechSynthesis.cancel();
+      stopSpeech();
       setIsSpeakingSummary(false);
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_~`>]/g, ' '));
-    utterance.rate = 1.0;
-
-    utterance.onstart = () => setIsSpeakingSummary(true);
-    utterance.onend = () => setIsSpeakingSummary(false);
-    utterance.onerror = () => setIsSpeakingSummary(false);
-
-    window.speechSynthesis.speak(utterance);
+    setIsSpeakingSummary(true);
+    speakTextInLanguage(
+      text,
+      selectedLanguage,
+      () => setIsSpeakingSummary(true),
+      () => setIsSpeakingSummary(false),
+      () => setIsSpeakingSummary(false)
+    );
   };
 
   const currentSubjectNotes = notes.filter(
@@ -136,7 +177,7 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
 
   const handleGenerateSummary = async () => {
     if (!inputText.trim()) {
-      setErrorMsg('Please enter or paste study notes/text to analyze.');
+      setErrorMsg(selectedLanguage.startsWith('af') ? 'Voer asseblief studienotas of teks in om te ontleed.' : 'Please enter or paste study notes/text to analyze.');
       return;
     }
     setErrorMsg('');
@@ -155,6 +196,7 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
         body: JSON.stringify({
           text: inputText,
           subject: currentSubject?.name || 'General Studies',
+          language: selectedLanguage,
         }),
       });
 
@@ -163,17 +205,20 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
         throw new Error(data.error || 'Failed to generate summary');
       }
 
+      const isAf = selectedLanguage.startsWith('af');
+      const defaultTitle = isAf ? `${currentSubject?.name || 'Studie'} KI-Opsomming` : 'AI Generated Note Summary';
+
       const newNote: Note = {
         id: `note-${Date.now()}`,
         subjectId: selectedSubjectId,
-        title: noteTitle.trim() || data.title || 'AI Generated Note Summary',
+        title: noteTitle.trim() || data.title || defaultTitle,
         content: inputText,
         summary: data.summary || '',
         keyTakeaways: data.keyTakeaways || [],
         glossary: data.glossary || [],
         studyTips: data.studyTips || [],
         createdAt: new Date().toISOString().split('T')[0],
-        tags: [currentSubject?.name || 'Study Notes', 'AI Summary'],
+        tags: [currentSubject?.name || 'Study Notes', isAf ? 'Afrikaans KI' : 'AI Summary'],
       };
 
       onAddNote(newNote);
@@ -183,8 +228,9 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
     } catch (err: any) {
       console.warn('API error or offline mode, falling back to Local Offline AI:', err);
       // Fallback to Offline AI Engine
-      const offlineRes = generateOfflineSummary(inputText, currentSubject?.name || 'General Studies');
+      const offlineRes = generateOfflineSummary(inputText, currentSubject?.name || 'General Studies', selectedLanguage);
 
+      const isAf = selectedLanguage.startsWith('af');
       const offlineNote: Note = {
         id: `note-${Date.now()}`,
         subjectId: selectedSubjectId,
@@ -195,7 +241,7 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
         glossary: offlineRes.glossary,
         studyTips: offlineRes.studyTips,
         createdAt: new Date().toISOString().split('T')[0],
-        tags: [currentSubject?.name || 'Study Notes', 'Offline AI Summary'],
+        tags: [currentSubject?.name || 'Study Notes', isAf ? 'Vanlyn Afrikaans KI' : 'Offline AI Summary'],
       };
 
       onAddNote(offlineNote);
@@ -224,14 +270,31 @@ export const NotesSummarizerTab: React.FC<NotesSummarizerTabProps> = ({
           <div>
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-white/10 dark:bg-emerald-500/20 border border-white/20 dark:border-emerald-400/30 backdrop-blur-md rounded-full text-emerald-200 dark:text-emerald-300 text-xs font-bold mb-2">
               <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-              <span>AI Executive Note Condenser</span>
+              <span>AI Executive Note Condenser & Afrikaans Engine</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
               AI Note Summarizer & Key Insight Extractor
             </h1>
             <p className="text-blue-100 dark:text-emerald-200 text-sm mt-1 max-w-2xl">
-              Paste lectures, textbook paragraphs, or rough study notes. Gemini AI will automatically generate high-yield summaries, key takeaways, vocabulary glossaries, and study tips.
+              Plak lesingnotas, handboekgedeeltes of opsommings. Gemini KI ontleed en genereer outomaties hoë-waarde opsommings, sleutelbegrippe en eksamenwenke in egte Afrikaans en Engels.
             </p>
+          </div>
+
+          {/* Language Selector */}
+          <div className="flex items-center gap-2 bg-white/10 dark:bg-black/30 backdrop-blur-md border border-white/20 rounded-2xl px-3.5 py-2 shrink-0">
+            <Globe className="w-4 h-4 text-amber-300" />
+            <span className="text-xs font-bold text-white">Taal / Language:</span>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="bg-emerald-900/80 text-white border border-emerald-400/40 rounded-xl px-2.5 py-1 text-xs font-bold focus:outline-none cursor-pointer"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+                  {l.flag} {l.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

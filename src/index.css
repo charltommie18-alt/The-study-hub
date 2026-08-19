@@ -3,14 +3,14 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #F9F7F2;
-    color: #3C3C3B;
+    background-color: #F8FAFC;
+    color: #0F172A;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   body.dark, html.dark body {
-    background-color: #121613;
-    color: #F4F1EA;
+    background-color: #090D16;
+    color: #F8FAFC;
     color-scheme: dark;
   }
 
@@ -19,93 +19,153 @@
   }
 }
 
-/* Custom scrollbar for Natural Tones design theme */
+/* Custom vibrant scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F2EFE9;
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D9D1C7;
+  background: #CBD5E1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8C857A;
+  background: #6366F1;
 }
 
-/* Natural Tones High-Contrast Dark Mode Overrides for Late-Night Study Sessions */
+/* Dark mode vibrant scrollbars */
 html.dark ::-webkit-scrollbar-track, body.dark ::-webkit-scrollbar-track {
-  background: #181E19;
+  background: #0B0F19;
 }
 html.dark ::-webkit-scrollbar-thumb, body.dark ::-webkit-scrollbar-thumb {
-  background: #364438;
+  background: #334155;
 }
 html.dark ::-webkit-scrollbar-thumb:hover, body.dark ::-webkit-scrollbar-thumb:hover {
-  background: #5A6D5B;
+  background: #818CF8;
 }
 
+/* Header & Card Overrides with lively vibrant touch */
 html.dark header, body.dark header {
-  background-color: rgba(24, 30, 25, 0.95) !important;
-  border-color: #323E34 !important;
-  color: #F4F1EA !important;
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
 }
 
 html.dark .bg-white, body.dark .bg-white {
-  background-color: #1C231E !important;
-  color: #F4F1EA !important;
+  background-color: #111827 !important;
+  color: #F8FAFC !important;
+  border-color: #1F2937 !important;
 }
 
+/* Light mode modern lively remapping */
+html:not(.dark) .bg-\[\#F9F7F2\], body:not(.dark) .bg-\[\#F9F7F2\] {
+  background-color: #F8FAFC !important;
+}
+
+html:not(.dark) .bg-\[\#F2EFE9\], body:not(.dark) .bg-\[\#F2EFE9\] {
+  background-color: #F1F5F9 !important;
+}
+
+html:not(.dark) .bg-\[\#EBE7DF\], body:not(.dark) .bg-\[\#EBE7DF\] {
+  background-color: #FFFFFF !important;
+}
+
+html:not(.dark) .border-\[\#D9D1C7\], body:not(.dark) .border-\[\#D9D1C7\] {
+  border-color: #E2E8F0 !important;
+}
+
+html:not(.dark) .border-\[\#E8E2D8\], body:not(.dark) .border-\[\#E8E2D8\] {
+  border-color: #E2E8F0 !important;
+}
+
+html:not(.dark) .text-\[\#2D362E\], body:not(.dark) .text-\[\#2D362E\] {
+  color: #0F172A !important;
+}
+
+html:not(.dark) .text-\[\#3C3C3B\], body:not(.dark) .text-\[\#3C3C3B\] {
+  color: #1E293B !important;
+}
+
+html:not(.dark) .text-\[\#7A746B\], body:not(.dark) .text-\[\#7A746B\] {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-\[\#8C857A\], body:not(.dark) .text-\[\#8C857A\] {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-\[\#575047\], body:not(.dark) .text-\[\#575047\] {
+  color: #334155 !important;
+}
+
+html:not(.dark) .bg-\[\#E2EFE3\], body:not(.dark) .bg-\[\#E2EFE3\] {
+  background-color: #ECFDF5 !important;
+  color: #047857 !important;
+}
+
+/* Dark mode lively remapping with obsidian depth & neon highlights */
 html.dark .bg-\[\#F9F7F2\], body.dark .bg-\[\#F9F7F2\] {
-  background-color: #161B17 !important;
+  background-color: #111827 !important;
 }
 
 html.dark .bg-\[\#F2EFE9\], body.dark .bg-\[\#F2EFE9\] {
-  background-color: #212A23 !important;
+  background-color: #1E293B !important;
 }
 
 html.dark .bg-\[\#EBE7DF\], body.dark .bg-\[\#EBE7DF\] {
-  background-color: #181E19 !important;
+  background-color: #0F172A !important;
 }
 
 html.dark .bg-\[\#E2EFE3\], body.dark .bg-\[\#E2EFE3\] {
-  background-color: #1E3321 !important;
-  color: #A3E6AB !important;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34D399 !important;
 }
 
 html.dark .text-\[\#2D362E\], body.dark .text-\[\#2D362E\] {
-  color: #F4F1EA !important;
+  color: #F8FAFC !important;
 }
 
 html.dark .text-\[\#3C3C3B\], body.dark .text-\[\#3C3C3B\] {
-  color: #E6E1D8 !important;
+  color: #F1F5F9 !important;
 }
 
 html.dark .text-\[\#7A746B\], body.dark .text-\[\#7A746B\] {
-  color: #B5AEA3 !important;
+  color: #94A3B8 !important;
 }
 
 html.dark .text-\[\#8C857A\], body.dark .text-\[\#8C857A\] {
-  color: #A39B90 !important;
+  color: #94A3B8 !important;
 }
 
 html.dark .text-\[\#575047\], body.dark .text-\[\#575047\] {
-  color: #C2BBB0 !important;
+  color: #CBD5E1 !important;
 }
 
 html.dark .border-\[\#D9D1C7\], body.dark .border-\[\#D9D1C7\] {
-  border-color: #334035 !important;
+  border-color: #1E293B !important;
 }
 
 html.dark .border-\[\#E8E2D8\], body.dark .border-\[\#E8E2D8\] {
-  border-color: #2D382F !important;
+  border-color: #1E293B !important;
 }
 
 html.dark input, html.dark select, html.dark textarea,
 body.dark input, body.dark select, body.dark textarea {
-  background-color: #161B17 !important;
-  color: #F4F1EA !important;
-  border-color: #3B4A3E !important;
+  background-color: #111827 !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
 }
 
+/* Lively UI enhancements */
+.card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+html.dark .card-hover:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(99, 102, 241, 0.1);
+}

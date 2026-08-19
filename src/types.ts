@@ -1,4 +1,90 @@
-export type TabType = 'notes' | 'flashcards' | 'quiz' | 'focus' | 'tutor' | 'upload' | 'achievements' | 'studyroom' | 'analytics' | 'admin';
+export type TabType = 
+  | 'notes' 
+  | 'flashcards' 
+  | 'quiz' 
+  | 'mockexam'
+  | 'podcast'
+  | 'canvas'
+  | 'focus' 
+  | 'tutor' 
+  | 'upload' 
+  | 'achievements' 
+  | 'studyroom' 
+  | 'analytics' 
+  | 'admin' 
+  | 'planner';
+
+export interface ExamQuestion {
+  id: string;
+  section: string; // 'Section A: Objective' | 'Section B: Structured' | 'Section C: Extended'
+  questionText: string;
+  marks: number;
+  type: 'multiple-choice' | 'short-answer' | 'essay';
+  options?: string[];
+  correctOptionIndex?: number;
+  modelAnswer: string;
+  afrikaansTranslation?: string;
+  rubricCriteria: string[];
+}
+
+export interface MockExamPaper {
+  id: string;
+  title: string;
+  subjectId: string;
+  subjectName: string;
+  gradeLevel: GradeLevel;
+  durationMinutes: number;
+  totalMarks: number;
+  questions: ExamQuestion[];
+}
+
+export interface PodcastEpisode {
+  id: string;
+  title: string;
+  subjectId: string;
+  subjectName: string;
+  topic: string;
+  durationSeconds: number;
+  language: 'af-ZA' | 'en-US' | 'en-ZA';
+  audioUrl?: string;
+  transcript: string;
+  afrikaansTranscript?: string;
+  keyTakeaways: string[];
+  createdAt: string;
+}
+
+export interface DiagramAnalysisResult {
+  accuracyScore: number; // 0-100
+  title: string;
+  feedback: string;
+  correctLabels: string[];
+  missingOrIncorrectLabels: string[];
+  examTips: string;
+}
+
+export interface ProjectDeadline {
+  id: string;
+  title: string;
+  subjectName: string;
+  dueDate: string;
+  priority: 'High' | 'Medium' | 'Low';
+  description?: string;
+  isCompleted: boolean;
+}
+
+export interface PlannedSession {
+  id: string;
+  dayLabel: string;
+  timeSlot: string;
+  subjectName: string;
+  topic: string;
+  taskType: string;
+  durationMinutes: number;
+  priority: 'High' | 'Medium' | 'Low';
+  reminderAlertTime?: string;
+  taskDescription?: string;
+  isCompleted: boolean;
+}
 
 export type GradeLevel = 
   | 'grade-7' 

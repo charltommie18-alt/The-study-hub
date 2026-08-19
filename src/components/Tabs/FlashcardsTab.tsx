@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Flashcard, Subject } from '../../types';
 import { generateOfflineFlashcards } from '../../utils/offlineAI';
 import { 
+  speakTextInLanguage, 
+  stopSpeech, 
+  loadVoiceSettings 
+} from '../../utils/multilingualSpeech';
+import { 
   calculateSpacedRepetition, 
   isCardDueForReview, 
   getDueStatusLabel, 
@@ -64,6 +69,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [isBilingualMode, setIsBilingualMode] = useState(false);
 
   // Voice Input State
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -119,18 +125,20 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
   }, [isDrillMode, activeDrillCard, isFlipped, drillIndex]);
 
   const handleSpeakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      if (speaking) {
-        setSpeaking(false);
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.onend = () => setSpeaking(false);
-      setSpeaking(true);
-      window.speechSynthesis.speak(utterance);
+    if (speaking) {
+      stopSpeech();
+      setSpeaking(false);
+      return;
     }
+    const preferredLang = loadVoiceSettings().preferredLanguage || 'af-ZA';
+    setSpeaking(true);
+    speakTextInLanguage(
+      text,
+      preferredLang,
+      () => setSpeaking(true),
+      () => setSpeaking(false),
+      () => setSpeaking(false)
+    );
   };
 
   // Voice Input Dictation for Active Recall Answering
@@ -144,7 +152,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = loadVoiceSettings().preferredLanguage || 'af-ZA';
 
     recognition.onstart = () => {
       setIsVoiceActive(true);
@@ -204,7 +212,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.lang = 'en-US';
+    recognition.lang = loadVoiceSettings().preferredLanguage || 'af-ZA';
 
     recognition.onstart = () => setIsDictatingTopic(true);
 
@@ -243,6 +251,8 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
     setGenError('');
     setIsGenerating(true);
 
+    const preferredLang = loadVoiceSettings().preferredLanguage || 'af-ZA';
+
     try {
       if (!navigator.onLine) {
         throw new Error('Offline mode - generating cards with Offline AI Engine');
@@ -256,6 +266,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
           subject: currentSubject?.name || 'General',
           count: genCount,
           difficulty: genDifficulty,
+          language: preferredLang,
         }),
       });
 
@@ -279,7 +290,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
       setGenTopic('');
     } catch (err: any) {
       console.warn('API or network offline, fallback to Offline AI Engine:', err);
-      const offlineCardsData = generateOfflineFlashcards(genTopic, currentSubject?.name || 'General', genCount);
+      const offlineCardsData = generateOfflineFlashcards(genTopic, currentSubject?.name || 'General', genCount, preferredLang);
       const newCards: Flashcard[] = offlineCardsData.map((fc, idx) => ({
         id: `fc-off-${Date.now()}-${idx}`,
         subjectId: selectedSubjectId,
@@ -507,10 +518,27 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
       {isDrillMode && activeDrillCard ? (
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Progress Header */}
-          <div className="flex items-center justify-between text-xs text-[#7A746B] dark:text-[#A6C4A7]">
-            <span>
-              Card <strong className="text-[#2D362E] dark:text-white">{drillIndex + 1}</strong> of <strong className="text-[#2D362E] dark:text-white">{filteredCards.length}</strong>
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#7A746B] dark:text-[#A6C4A7]">
+            <div className="flex items-center gap-3">
+              <span>
+                Kaart <strong className="text-[#2D362E] dark:text-white">{drillIndex + 1}</strong> van <strong className="text-[#2D362E] dark:text-white">{filteredCards.length}</strong>
+              </span>
+              
+              {/* Bilingual Mode Toggle Button */}
+              <button
+                onClick={() => setIsBilingualMode(!isBilingualMode)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isBilingualMode
+                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                    : 'bg-[#F2EFE9] dark:bg-[#202B22] text-[#5A6D5B] dark:text-emerald-300 border-[#D9D1C7] dark:border-[#2F3E31]'
+                }`}
+                title="Skakel tweetalige flitskaartmodus aan/af"
+              >
+                <span>🇿🇦 🇬🇧</span>
+                <span>{isBilingualMode ? 'Tweetalige Modus: AAN' : 'Tweetalig'}</span>
+              </button>
+            </div>
+
             <div className="flex items-center gap-2">
               {(() => {
                 const dueInfo = getDueStatusLabel(activeDrillCard);
@@ -582,6 +610,13 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
                     {activeDrillCard.question}
                   </h2>
 
+                  {/* Bilingual Mode Badge / Helper */}
+                  {isBilingualMode && (
+                    <div className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-full text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                      <span>🇿🇦 Afrikaans / Engels tweetalige konsep</span>
+                    </div>
+                  )}
+
                   {/* Voice Active Recall Answer Input */}
                   <div className="pt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex flex-col items-center gap-2 max-w-md w-full mx-auto">
@@ -595,7 +630,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
                         }`}
                       >
                         <Mic className={`w-4 h-4 ${isVoiceActive ? 'text-white' : 'text-blue-600 dark:text-cyan-300'}`} />
-                        <span>{isVoiceActive ? 'Listening to Spoken Answer...' : '🎤 Speak Answer (Voice Active Recall)'}</span>
+                        <span>{isVoiceActive ? 'Luister na Gesproke Antwoord...' : '🎤 Praat Antwoord (Aktiewe Herroeping)'}</span>
                       </button>
 
                       {voiceTranscript && (
@@ -607,7 +642,7 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
                             onClick={handleEvaluateVoiceRecall}
                             className="px-3 py-1 bg-emerald-600 text-white rounded-xl text-[11px] font-bold hover:bg-emerald-700 cursor-pointer"
                           >
-                            Check Voice Recall Accuracy
+                            Kontroleer Stem-Akkuraatheid
                           </button>
                         </div>
                       )}
@@ -619,16 +654,37 @@ export const FlashcardsTab: React.FC<FlashcardsTabProps> = ({
                   {voiceMatchScore !== null && (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700 rounded-full text-emerald-900 dark:text-emerald-200 text-xs font-extrabold">
                       <Target className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{voiceMatchScore}% Voice Answer Accuracy</span>
+                      <span>{voiceMatchScore}% Stem-Akkuraatheid</span>
                     </div>
                   )}
 
                   <p className="text-lg sm:text-xl font-serif font-bold text-[#5A6D5B] dark:text-emerald-300 leading-relaxed">
                     {activeDrillCard.answer}
                   </p>
+
+                  {/* Bilingual Mode Audio Helper */}
+                  {isBilingualMode && (
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-900 dark:text-emerald-200 text-xs text-left font-medium flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🇿🇦</span>
+                        <span>Luister na die suiwer Afrikaanse uitspraak met die manlike stem.</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSpeakText(activeDrillCard.answer);
+                        }}
+                        className="px-2 py-1 bg-emerald-600 text-white rounded-lg font-bold text-[11px] hover:bg-emerald-700 cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        <span>Luister</span>
+                      </button>
+                    </div>
+                  )}
+
                   {activeDrillCard.hint && showHint && (
                     <div className="p-3 bg-[#FDF1E6] dark:bg-amber-950/40 border border-[#E8D1BE] dark:border-amber-800 rounded-xl text-[#B87D4B] dark:text-amber-200 text-xs text-left font-medium">
-                      💡 <strong>Hint:</strong> {activeDrillCard.hint}
+                      💡 <strong>Wenk:</strong> {activeDrillCard.hint}
                     </div>
                   )}
                 </div>

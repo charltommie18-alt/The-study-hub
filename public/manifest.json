@@ -1,16 +1,48 @@
 {
-  "name": "The Study Hub",
+  "id": "/",
+  "name": "The Study Hub AI Companion",
   "short_name": "StudyHub",
-  "description": "Offline-ready AI Study Companion with Notes, Flashcards, Quizzes, Focus Studio, AI Tutor, and WhatsApp Sharing.",
+  "description": "All-in-one offline AI Study Companion with Notes Summarizer, Flashcards, Adaptive Quizzes, Focus Pomodoro, and AI Tutor.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#F9F7F2",
   "theme_color": "#5A6D5B",
+  "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235A6D5B'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z'/></svg>",
-      "sizes": "192x192 512x512",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Study Tutor",
+      "short_name": "AI Tutor",
+      "description": "Interactive study session with AI Tutor",
+      "url": "/?tab=tutor",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pomodoro Focus Studio",
+      "short_name": "Focus Studio",
+      "description": "Open Pomodoro focus timer and ambient sounds",
+      "url": "/?tab=focus",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

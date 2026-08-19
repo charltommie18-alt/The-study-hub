@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QuizQuestion, QuizResult, Subject } from '../../types';
 import { generateOfflineQuiz } from '../../utils/offlineAI';
+import { loadVoiceSettings } from '../../utils/multilingualSpeech';
 import { 
   Sparkles, 
   HelpCircle, 
@@ -66,6 +67,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({
     setGenError('');
     setIsGenerating(true);
 
+    const preferredLang = loadVoiceSettings().preferredLanguage || 'af-ZA';
+
     try {
       if (!navigator.onLine) {
         throw new Error('Offline mode - building quiz with Offline AI Engine');
@@ -78,6 +81,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({
           text: genTopic,
           subject: currentSubject?.name || 'General Studies',
           count: genCount,
+          language: preferredLang,
         }),
       });
 
@@ -95,7 +99,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({
       }
     } catch (err: any) {
       console.warn('API error or offline, fallback to Offline AI Engine:', err);
-      const offlineQuestions = generateOfflineQuiz(genTopic, currentSubject?.name || 'General Studies', genCount);
+      const offlineQuestions = generateOfflineQuiz(genTopic, currentSubject?.name || 'General Studies', genCount, preferredLang);
       setActiveQuestions(offlineQuestions);
       setCurrentIndex(0);
       setUserAnswers({});

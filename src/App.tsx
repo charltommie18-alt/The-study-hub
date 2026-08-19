@@ -25,8 +25,13 @@ import { FocusTimerTab } from './components/Tabs/FocusTimerTab';
 import { AITutorTab } from './components/Tabs/AITutorTab';
 import { AchievementsTab } from './components/Tabs/AchievementsTab';
 import { StudyRoomTab } from './components/Tabs/StudyRoomTab';
+import { StudyPlannerTab } from './components/Tabs/StudyPlannerTab';
 import { AnalyticsTab } from './components/Tabs/AnalyticsTab';
 import { AdminDashboardTab } from './components/Tabs/AdminDashboardTab';
+import { ExamModeTab } from './components/Tabs/ExamModeTab';
+import { AudioPodcastTab } from './components/Tabs/AudioPodcastTab';
+import { VisualLabCanvasTab } from './components/Tabs/VisualLabCanvasTab';
+import { VoiceNarrationController } from './components/VoiceNarrationController';
 import { FloatingStudyTools } from './components/FloatingStudyTools';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
@@ -37,6 +42,8 @@ import { WhatsAppShareModal } from './components/Modals/WhatsAppShareModal';
 import { StoreExportModal } from './components/Modals/StoreExportModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { SubscriptionModal } from './components/Modals/SubscriptionModal';
+import { InstallAppModal } from './components/Modals/InstallAppModal';
+import { ShortcutsModal } from './components/Modals/ShortcutsModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('notes');
@@ -44,6 +51,8 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => loadFromStorage('cape_dark_mode', false));
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState<boolean>(false);
+  const [isInstallOpen, setIsInstallOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
 
   // Subscription state (7-day free trial + monthly plan + Fire OS compatibility)
   const [subscription, setSubscription] = useState<SubscriptionState>(() =>
@@ -100,6 +109,46 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Global Power-User Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      if (isCtrlOrCmd) {
+        const key = e.key.toLowerCase();
+
+        if (key === 'n') {
+          e.preventDefault();
+          setActiveTab('notes');
+        } else if (key === 'f') {
+          e.preventDefault();
+          setActiveTab('focus');
+        } else if (key === 't') {
+          e.preventDefault();
+          setActiveTab('tutor');
+        } else if (key === 'q') {
+          e.preventDefault();
+          setActiveTab('quiz');
+        } else if (key === 's') {
+          e.preventDefault();
+          setActiveTab('flashcards');
+        } else if (key === 'u') {
+          e.preventDefault();
+          setActiveTab('upload');
+        } else if (key === 'a' && e.shiftKey) {
+          e.preventDefault();
+          setActiveTab('analytics');
+        } else if (key === '/' || key === '?') {
+          e.preventDefault();
+          setIsShortcutsOpen((prev) => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Apply Dark Mode class to document root and sync to local storage
@@ -268,7 +317,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F7F2] dark:bg-[#121613] text-[#3C3C3B] dark:text-[#F4F1EA] flex flex-col font-sans selection:bg-[#5A6D5B] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-200">
       
       {/* Top Main Navigation Navbar */}
       <Navbar
@@ -287,6 +336,9 @@ export default function App() {
         onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
         onOpenStoreModal={() => setIsStoreModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenSubscriptionModal={() => setIsSubscriptionOpen(true)}
+        onOpenInstallModal={() => setIsInstallOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
@@ -323,6 +375,33 @@ export default function App() {
             onAddNote={handleAddNote}
             onAddFlashcards={handleAddFlashcards}
             onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        )}
+
+        {activeTab === 'mockexam' && (
+          <ExamModeTab
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+            currentGrade={currentGrade}
+            onSelectSubject={(id) => setSelectedSubjectId(id)}
+            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+          />
+        )}
+
+        {activeTab === 'podcast' && (
+          <AudioPodcastTab
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+            currentGrade={currentGrade}
+            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+          />
+        )}
+
+        {activeTab === 'canvas' && (
+          <VisualLabCanvasTab
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+            currentGrade={currentGrade}
           />
         )}
 
@@ -364,9 +443,17 @@ export default function App() {
             messages={tutorMessages}
             subjects={subjects}
             selectedSubjectId={selectedSubjectId}
+            onSelectSubject={(id) => setSelectedSubjectId(id)}
+            currentGrade={currentGrade}
+            onSelectGrade={(grade) => setCurrentGrade(grade)}
             onSendMessage={handleSendMessage}
+            onClearMessages={() => {
+              setTutorMessages([]);
+              saveToStorage('cape_tutor_msg', []);
+            }}
             onAddFlashcard={(newCard) => handleAddFlashcards([newCard])}
             onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+            onOpenAddSubject={() => setIsAddSubjectOpen(true)}
           />
         )}
 
@@ -381,6 +468,13 @@ export default function App() {
         {activeTab === 'studyroom' && (
           <StudyRoomTab
             currentGrade={currentGrade}
+            currentSubjectName={currentSubject?.name || 'General Study'}
+          />
+        )}
+
+        {activeTab === 'planner' && (
+          <StudyPlannerTab
+            subjects={subjects}
             currentSubjectName={currentSubject?.name || 'General Study'}
           />
         )}
@@ -457,6 +551,11 @@ export default function App() {
         onUpdateSubscription={(newSub) => setSubscription(newSub)}
       />
 
+      <InstallAppModal
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+      />
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -469,6 +568,14 @@ export default function App() {
         isOffline={isOffline}
         onToggleOffline={(off) => setIsOffline(off)}
       />
+
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Global AI Voice Audio Script Bar with Pause / Resume / Speed */}
+      <VoiceNarrationController />
 
       {/* Floating Study Tools & Companion Widget */}
       <FloatingStudyTools currentSubjectName={currentSubject?.name || 'General Study'} />

@@ -461,21 +461,21 @@ export const INITIAL_TUTOR_MESSAGES: TutorMessage[] = [
   {
     id: 'tm-1',
     role: 'assistant',
-    text: `👋 Welcome to **The Study Hub AI Tutor**! I am your personal academic coach. 
+    text: `👋 Goeiedag! Welkom by **Die StudieHub KI-Onderwyser**. Ek is jou persoonlike akademiese leermeester en eksamen-afrigter.
 
-I can help you:
-- **Simplify complex concepts** with real-world analogies
-- **Dissect exam-style practice problems** step-by-step
-- **Generate custom study cards and memory mnemonics**
-- **Test your understanding** with Socratic questioning
+Ek kan jou help met:
+- **Eenvoudige verduidelikings** van ingewikkelde konsepte in suiwer Afrikaans
+- **Stap-vir-stap ontleding** van eksamenvrae en berekeninge
+- **Gepersonaliseerde flitskaarte en geheuetegnieke**
+- **Sokratiese vrae** om jou kennis deeglik te toets
 
-What topic are we mastering today? You can select a persona or ask a question directly!`,
-    timestamp: 'Just now',
+Watter onderwerp of vraestel wil jy vandag bemeester? Tik jou vraag hieronder of praat direk in jou mikrofoon!`,
+    timestamp: 'Nou net',
     suggestedFollowups: [
-      'Explain Photosynthesis like I am 5',
-      'How do I calculate Big-O for recursive functions?',
-      'Give me 3 high-yield tips for my upcoming exam',
-      'Help me build a 7-day study plan',
+      'Verduidelik Fotosintese eenvoudig soos vir \'n 10-jarige',
+      'Watter stappe gebruik ek vir Newton se Tweede Bewegingswet?',
+      'Gee my 3 hoë-waarde wenke vir my komende eksamen',
+      'Help my om \'n 7-dae studieprogram op te stel',
     ],
   },
 ];
