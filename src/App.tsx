@@ -16,6 +16,7 @@ import { PushNotificationSettings } from './types';
 import { calculateSpacedRepetition, RepetitionRating } from './utils/spacedRepetition';
 
 import { Navbar } from './components/Navbar';
+import { HomeScreenInstallBanner } from './components/HomeScreenInstallBanner';
 import { SubjectBar } from './components/SubjectBar';
 import { NotesSummarizerTab } from './components/Tabs/NotesSummarizerTab';
 import { DocumentUploadTab } from './components/Tabs/DocumentUploadTab';
@@ -319,6 +320,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-200">
       
+      {/* Dynamic 1-Tap Homescreen Install Banner */}
+      <HomeScreenInstallBanner onOpenInstallModal={() => setIsInstallOpen(true)} />
+
       {/* Top Main Navigation Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -503,6 +507,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onOpenStoreModal={() => setIsStoreModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenInstallModal={() => setIsInstallOpen(true)}
         currentGrade={currentGrade}
         isDarkMode={isDarkMode}
       />
@@ -567,6 +572,7 @@ export default function App() {
         onSelectGrade={(g) => setCurrentGrade(g)}
         isOffline={isOffline}
         onToggleOffline={(off) => setIsOffline(off)}
+        onOpenInstallModal={() => setIsInstallOpen(true)}
       />
 
       <ShortcutsModal

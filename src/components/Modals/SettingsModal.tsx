@@ -37,6 +37,7 @@ interface SettingsModalProps {
   onSelectGrade: (grade: GradeLevel) => void;
   isOffline: boolean;
   onToggleOffline: (offline: boolean) => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -50,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSelectGrade,
   isOffline,
   onToggleOffline,
+  onOpenInstallModal,
 }) => {
   if (!isOpen) return null;
 
@@ -324,6 +326,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Section: Download / Install to Homescreen */}
+          {onOpenInstallModal && (
+            <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-[#132217] dark:to-[#17261C] border border-emerald-300 dark:border-emerald-700/60 rounded-2xl space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+                    <Sparkles className="w-4 h-4 text-amber-200" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Laai Af na Tuisskerm / Install App</h3>
+                    <p className="text-xs text-emerald-700/90 dark:text-emerald-400">
+                      Voeg StudyHub by jou foon se tuisskerm vir 1-tik vanlyn toegang
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenInstallModal();
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                >
+                  Installeer Nou
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Section 4: Offline Engine Mode */}
           <div className="p-4 bg-white dark:bg-[#161B17] border border-[#D9D1C7] dark:border-[#2E3B30] rounded-2xl space-y-3 shadow-xs">

@@ -206,15 +206,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Install App to Homescreen Button */}
+            {/* Install / Download App to Homescreen Button - Always visible on mobile & desktop */}
             {onOpenInstallModal && (
               <button
                 onClick={onOpenInstallModal}
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700 rounded-full text-emerald-800 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                title="Download StudyHub App to Homescreen / Offline PWA"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-md active:scale-95 shrink-0 border border-emerald-400/40 animate-pulse-subtle"
+                title="Laai StudyHub af na jou foon se tuisskerm (Install Offline App)"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden md:inline">Install</span>
+                <Download className="w-3.5 h-3.5 text-amber-200" />
+                <span className="font-extrabold">Laai Af</span>
               </button>
             )}
 

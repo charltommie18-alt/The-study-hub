@@ -18,7 +18,8 @@ import {
   Settings,
   ChevronDown,
   ChevronUp,
-  LayoutGrid
+  LayoutGrid,
+  Download
 } from 'lucide-react';
 import { TabType, GradeLevel } from '../types';
 import { PolicyModal } from './Modals/PolicyModal';
@@ -27,6 +28,7 @@ interface FooterProps {
   setActiveTab: (tab: TabType) => void;
   onOpenStoreModal: () => void;
   onOpenSettings: () => void;
+  onOpenInstallModal?: () => void;
   currentGrade: GradeLevel;
   isDarkMode: boolean;
 }
@@ -35,6 +37,7 @@ export const Footer: React.FC<FooterProps> = ({
   setActiveTab,
   onOpenStoreModal,
   onOpenSettings,
+  onOpenInstallModal,
   currentGrade,
   isDarkMode,
 }) => {
@@ -68,6 +71,17 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenInstallModal && (
+              <button
+                onClick={onOpenInstallModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                title="Laai StudyHub af na jou tuisskerm"
+              >
+                <Download className="w-3.5 h-3.5 text-amber-200" />
+                <span>Laai Af na Tuisskerm</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#F9F7F2] dark:bg-[#1C231E] hover:bg-white dark:hover:bg-[#253028] border border-[#D9D1C7] dark:border-[#334235] text-[#2D362E] dark:text-emerald-300 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
