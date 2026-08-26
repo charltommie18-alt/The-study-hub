@@ -1,0 +1,11 @@
+{
+  "studyhub_monthly_term": {
+    "itemType": "SUBSCRIPTION",
+    "price": 4.99,
+    "title": "StudyHub Pro Monthly",
+    "description": "StudyHub Pro monthly subscription with a 7-day free trial.",
+    "subscriptionParent": "studyhub_monthly_sub",
+    "term": "Monthly",
+    "freeTrialPeriod": "Weekly"
+  }
+}

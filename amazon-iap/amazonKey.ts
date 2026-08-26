@@ -1,0 +1,18 @@
+/**
+ * Amazon Appstore Public Authentication Key / DRM Key
+ *
+ * Standalone configuration. Kept separate from the main app.
+ */
+
+export const AMAZON_APPSTORE_PUBLIC_KEY_RAW =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqU5TMO5tkpjlr908xPwnnvtFFT60uCvXchruKoPOKRHXmF0EiuWk7ISluo/SFzaoDoygSFTRtHqN8Wrdi91HZ6vV4fN2s3GP+tMwVlR3Kw0ugEHk/OY0j3jmZD8I3x2mT6+icD70sfSSJd3t0sOibCZvduqmCPpzdsViEjgCqiz2dyVH2IWTiKMFPlWrHX6q1t+ag5egO4afPxDOre9Cw4GxHLZKPQ/Bk9cYAsVuz0vgC+WPEn0+aSvTK5hG95/uErOSvvLguqBv8ZSHbdj9vgH0I7/pgQ3b7lXyMnJBSyJ47/3Sxg0xMQcKyqaRxPt3D/GS2Njvr36Vg7nqViRSPwIDAQAB";
+
+export const AMAZON_APPSTORE_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqU5TMO5tkpjlr908xPwn
+nvtFFT60uCvXchruKoPOKRHXmF0EiuWk7ISluo/SFzaoDoygSFTRtHqN8Wrdi91H
+Z6vV4fN2s3GP+tMwVlR3Kw0ugEHk/OY0j3jmZD8I3x2mT6+icD70sfSSJd3t0sOi
+bCZvduqmCPpzdsViEjgCqiz2dyVH2IWTiKMFPlWrHX6q1t+ag5egO4afPxDOre9C
+w4GxHLZKPQ/Bk9cYAsVuz0vgC+WPEn0+aSvTK5hG95/uErOSvvLguqBv8ZSHbdj9
+vgH0I7/pgQ3b7lXyMnJBSyJ47/3Sxg0xMQcKyqaRxPt3D/GS2Njvr36Vg7nqViRS
+PwIDAQAB
+-----END PUBLIC KEY-----`;
