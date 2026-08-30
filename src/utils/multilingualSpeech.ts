@@ -1073,6 +1073,152 @@ export function validateVoiceSelection(
   // Gemini, Google or unrelated voice.
   if (locale === 'af-ZA') {
     if (
-      selectedVoice !==
-        AZURE_VOICES['af-ZA'].male &&
-      selec
+          selectedVoice !==
+        AZURE_VOICES['af-ZA'].female
+    ) {
+      return expected;
+    }
+  }
+
+  return selectedVoice;
+}
+
+export async function downloadSpeechAudio(
+  text: string,
+  language = speechState.langCode,
+  filename = 'studyhub_audio',
+): Promise<void> {
+  const locale =
+    normalizeLanguageCode(language);
+
+  const settings =
+    loadVoiceSettings();
+
+  const gender =
+    settings.voiceGender;
+
+  const result =
+    await requestSpeechAudio(
+      text,
+      locale,
+      gender,
+      settings.voiceSpeed,
+      settings.voiceVolume,
+      1,
+    );
+
+  let blob: Blob | null = null;
+
+  if (result.audioBase64) {
+    blob = base64ToBlob(
+      result.audioBase64,
+    );
+  } else if (result.audioUrl) {
+    const response =
+      await fetch(result.audioUrl);
+
+    blob = await response.blob();
+  }
+
+  if (!blob) {
+    throw new Error(
+      'No audio available for download.',
+    );
+  }
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const anchor =
+    document.createElement('a');
+
+  anchor.href = url;
+  anchor.download =
+    `${filename}.mp3`;
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+export function getCurrentVoice(): string {
+  return getAzureVoice(
+    speechState.langCode,
+    speechState.voiceGender,
+  );
+}
+
+export function setLanguage(
+  language: string,
+): void {
+  const locale =
+    normalizeLanguageCode(language);
+
+  const settings =
+    loadVoiceSettings();
+
+  const voice =
+    getAzureVoice(
+      locale,
+      settings.voiceGender,
+    );
+
+  saveVoiceSettings({
+    ...settings,
+    preferredLanguage: locale,
+    selectedVoiceURI: voice,
+    forceAfrikaansVoice:
+      locale === 'af-ZA',
+  });
+
+  speechState = {
+    ...speechState,
+    langCode: locale,
+    selectedVoiceURI: voice,
+  };
+
+  emitState();
+}
+
+export function resetVoiceSettings(): void {
+  saveVoiceSettings({
+    ...DEFAULT_VOICE_SETTINGS,
+  });
+
+  syncSettingsToState();
+
+  emitState();
+}
+
+export default {
+  SUPPORTED_LANGUAGES,
+  GENDER_VOICES,
+  DEFAULT_VOICE_SETTINGS,
+  getSpeechState,
+  subscribeSpeechState,
+  togglePauseSpeech,
+  stopSpeech,
+  restartSpeech,
+  setSpeechRate,
+  setSpeechPitch,
+  setSpeechVolume,
+  setSelectedVoiceURI,
+  setVoiceGender,
+  applyVoicePreset,
+  downloadSpeechAudio,
+  getAvailableSystemVoices,
+  subscribeVoicesList,
+  findAfrikaansBrowserVoice,
+  loadVoiceSettings,
+  validateLanguageCode,
+  speak,
+  speakText,
+  speakAfrikaans,
+  getAzureVoice,
+  getAfrikaansVoice,
+  getVoiceForLanguage,
+  isAfrikaans,
+  setLanguage,
+};
