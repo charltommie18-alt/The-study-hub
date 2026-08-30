@@ -1,299 +1,251 @@
-import { getSpeechLocale } from './language';
+import { Capacitor } from '@capacitor/core';
 
-type SpeechSDKLike = any;
+export type RecognitionLanguage = 'en-US' | 'af-ZA' | 'es-ES';
 
-type ActiveSession = {
-  id: number;
-  recognizer: any;
-  audioConfig: any;
-  speechConfig: any;
-  settled: boolean;
-};
-
-let activeSession: ActiveSession | null = null;
-let sessionId = 0;
-
-function getSpeechSDK(): SpeechSDKLike | null {
-  return typeof window !== 'undefined'
-    ? (window as any).SpeechSDK || null
-    : null;
+export interface VoiceRecognitionResult {
+  text: string;
+  final: boolean;
+  confidence?: number;
 }
 
-async function getAuthorization(): Promise<{ token: string; region: string }> {
-  const response = await fetch('/api/speech-token', {
-    cache: 'no-store',
-  });
+export interface VoiceRecognitionOptions {
+  language?: RecognitionLanguage;
+  onResult?: (result: VoiceRecognitionResult) => void;
+  onError?: (error: Error) => void;
+  onStart?: () => void;
+  onEnd?: () => void;
+}
 
-  if (!response.ok) {
-    let message = 'Azure Speech authorization failed.';
-    try {
-      const data = await response.json();
-      message = data?.error || message;
-    } catch {}
-    throw new Error(message);
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+}
+
+class VoiceInputController {
+  private recognition: SpeechRecognitionInstance | null = null;
+  private listening = false;
+  private stopping = false;
+  private options: VoiceRecognitionOptions = {};
+  private finalText = '';
+
+  get isListening(): boolean {
+    return this.listening;
   }
 
-  return response.json();
-}
-
-export function isVoiceInputSupported(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    !!getSpeechSDK() &&
-    !!navigator.mediaDevices?.getUserMedia
-  );
-}
-
-/**
- * Completely terminate the current microphone session.
- *
- * IMPORTANT:
- * We close BOTH the recognizer AND AudioConfig.
- * Closing only the recognizer can leave the microphone active
- * on some Android/Chrome combinations.
- */
-export function stopVoiceInput(): void {
-  sessionId++;
-
-  const old = activeSession;
-  activeSession = null;
-
-  if (!old) return;
-
-  old.settled = true;
-
-  try {
-    old.recognizer.stopContinuousRecognitionAsync?.(
-      () => {},
-      () => {}
-    );
-  } catch {}
-
-  try {
-    old.recognizer.close();
-  } catch {}
-
-  try {
-    old.audioConfig?.close?.();
-  } catch {}
-
-  try {
-    old.speechConfig?.close?.();
-  } catch {}
-}
-
-/**
- * Remove duplicated mobile speech-recognition artifacts.
- *
- * Example:
- * "kan kan jy kan jy my kan jy my"
- * becomes:
- * "kan jy my"
- */
-function cleanDuplicateSpeech(text: string): string {
-  let value = text
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!value) return '';
-
-  // Remove immediately repeated words:
-  // "kan kan jy jy my" -> "kan jy my"
-  value = value.replace(
-    /\b(\S+)(?:\s+\1\b)+/gi,
-    '$1'
-  );
-
-  // Remove repeated short phrases.
-  // Example:
-  // "kan jy my kan jy my" -> "kan jy my"
-  const words = value.split(/\s+/);
-
-  for (let size = Math.min(8, Math.floor(words.length / 2)); size >= 2; size--) {
-    let changed = true;
-
-    while (changed) {
-      changed = false;
-
-      for (let i = 0; i + size * 2 <= words.length; i++) {
-        const first = words.slice(i, i + size).join(' ').toLowerCase();
-        const second = words
-          .slice(i + size, i + size * 2)
-          .join(' ')
-          .toLowerCase();
-
-        if (first === second) {
-          words.splice(i + size, size);
-          changed = true;
-          break;
-        }
-      }
+  private getSpeechRecognitionConstructor(): any {
+    if (typeof window === 'undefined') {
+      return null;
     }
-  }
 
-  return words.join(' ').trim();
-}
-/**
- * Azure Speech single-shot recognition.
- *
- * One microphone press = one utterance.
- * No continuous recognition.
- * No interim results.
- * No result accumulation.
- */
-export async function recognizeOneUtterance(
-  language?: string
-): Promise<string> {
-  if (!isVoiceInputSupported()) {
-    throw new Error('Azure Speech is not available in this browser.');
-  }
+    const win = window as any;
 
-  // Kill anything left over from a previous session.
-  stopVoiceInput();
-
-  const myId = ++sessionId;
-  const sdk = getSpeechSDK();
-
-  if (!sdk) {
-    throw new Error('Speech SDK is not loaded.');
-  }
-
-  const { token, region } = await getAuthorization();
-
-  // User may have pressed Submit/Stop while the token was loading.
-  if (myId !== sessionId) return '';
-
-  const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
-    token,
-    region
-  );
-
-  speechConfig.speechRecognitionLanguage =
-    language || getSpeechLocale();
-
-  // Short silence ends the question.
-  try {
-    speechConfig.setProperty(
-      sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,
-      '900'
+    return (
+      win.SpeechRecognition ||
+      win.webkitSpeechRecognition ||
+      null
     );
-  } catch {}
+  }
 
-  const audioConfig =
-    sdk.AudioConfig.fromDefaultMicrophoneInput();
+  isSupported(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
 
-  const recognizer = new sdk.SpeechRecognizer(
-    speechConfig,
-    audioConfig
-  );
+    if (Capacitor.isNativePlatform()) {
+      return true;
+    }
 
-  const session: ActiveSession = {
-    id: myId,
-    recognizer,
-    audioConfig,
-    speechConfig,
-    settled: false,
-  };
+    return Boolean(this.getSpeechRecognitionConstructor());
+  }
 
-  activeSession = session;
+  async start(
+    options: VoiceRecognitionOptions = {},
+  ): Promise<boolean> {
+    if (this.listening) {
+      return true;
+    }
 
-  return new Promise((resolve, reject) => {
-    const finish = (
-      text = '',
-      error?: Error
-    ) => {
-      if (session.settled) return;
+    this.options = options;
+    this.finalText = '';
+    this.stopping = false;
 
-      session.settled = true;
+    const Recognition = this.getSpeechRecognitionConstructor();
 
-      if (activeSession === session) {
-        activeSession = null;
-      }
+    if (!Recognition) {
+      const error = new Error(
+        'Speech recognition is not available on this device.',
+      );
 
-      // IMPORTANT:
-      // Shut down the recognizer FIRST.
-      try {
-        recognizer.close();
-      } catch {}
-
-      // IMPORTANT:
-      // Release the actual microphone/audio source.
-      try {
-        audioConfig?.close?.();
-      } catch {}
-
-      try {
-        speechConfig?.close?.();
-      } catch {}
-
-      // Ignore callbacks from an old session.
-      if (myId !== sessionId) {
-        resolve('');
-        return;
-      }
-
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(cleanDuplicateSpeech(text));
-    };
+      this.options.onError?.(error);
+      return false;
+    }
 
     try {
-      recognizer.recognizeOnceAsync(
-        (result: any) => {
-          if (myId !== sessionId || session.settled) {
-            return;
-          }
+      this.recognition = new Recognition();
 
-          if (
-            result?.reason ===
-            sdk.ResultReason?.RecognizedSpeech
-          ) {
-            const text = result?.text || '';
+      this.recognition.continuous = false;
+      this.recognition.interimResults = true;
+      this.recognition.lang = options.language || 'en-US';
+      this.recognition.maxAlternatives = 1;
 
-            // STOP + DISPOSE happens BEFORE returning text.
-            finish(text);
-          } else if (
-            result?.reason ===
-            sdk.ResultReason?.NoMatch
-          ) {
-            finish('');
+      this.recognition.onstart = () => {
+        this.listening = true;
+        this.stopping = false;
+        this.options.onStart?.();
+      };
+
+      this.recognition.onresult = (event: any) => {
+        let interim = '';
+        let final = '';
+
+        for (
+          let i = event.resultIndex || 0;
+          i < event.results.length;
+          i += 1
+        ) {
+          const result = event.results[i];
+          const transcript =
+            result?.[0]?.transcript?.trim() || '';
+
+          if (!transcript) continue;
+
+          if (result.isFinal) {
+            final += `${transcript} `;
           } else {
-            const details =
-              sdk.CancellationDetails?.fromResult?.(result);
-
-            finish(
-              '',
-              new Error(
-                details?.errorDetails ||
-                  'Speech was not recognized.'
-              )
-            );
+            interim += `${transcript} `;
           }
-        },
-
-        (error: any) => {
-          finish(
-            '',
-            error instanceof Error
-              ? error
-              : new Error(
-                  String(
-                    error || 'Speech recognition failed.'
-                  )
-                )
-          );
         }
-      );
+
+        if (final) {
+          this.finalText = `${this.finalText} ${final}`
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+
+        const combined = `${this.finalText} ${interim}`
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (combined) {
+          this.options.onResult?.({
+            text: combined,
+            final: Boolean(final),
+          });
+        }
+      };
+
+      this.recognition.onerror = (event: any) => {
+        const errorCode = event?.error || 'unknown';
+
+        if (
+          errorCode === 'aborted' ||
+          errorCode === 'no-speech' ||
+          this.stopping
+        ) {
+          return;
+        }
+
+        const error = new Error(
+          `Speech recognition error: ${errorCode}`,
+        );
+
+        this.options.onError?.(error);
+      };
+
+      this.recognition.onend = () => {
+        this.listening = false;
+        this.stopping = false;
+
+        this.options.onEnd?.();
+
+        this.recognition = null;
+      };
+
+      this.recognition.start();
+
+      return true;
     } catch (error) {
-      finish(
-        '',
+      this.listening = false;
+      this.stopping = false;
+      this.recognition = null;
+
+      const normalized =
         error instanceof Error
           ? error
-          : new Error('Could not start microphone.')
-      );
+          : new Error('Unable to start speech recognition.');
+
+      this.options.onError?.(normalized);
+
+      return false;
     }
-  });
-            }
+  }
+
+  stop(): void {
+    if (!this.recognition) {
+      this.listening = false;
+      return;
+    }
+
+    this.stopping = true;
+
+    try {
+      this.recognition.stop();
+    } catch {
+      try {
+        this.recognition.abort();
+      } catch {
+        // Ignore cleanup errors.
+      }
+    }
+  }
+
+  abort(): void {
+    this.stopping = true;
+
+    if (this.recognition) {
+      try {
+        this.recognition.abort();
+      } catch {
+        // Ignore cleanup errors.
+      }
+    }
+
+    this.listening = false;
+    this.recognition = null;
+  }
+
+  reset(): void {
+    this.abort();
+    this.finalText = '';
+    this.options = {};
+  }
+}
+
+export const voiceInput = new VoiceInputController();
+
+export function getRecognitionLanguage(
+  language: string,
+): RecognitionLanguage {
+  const value = language.toLowerCase();
+
+  if (value === 'af' || value.startsWith('af-')) {
+    return 'af-ZA';
+  }
+
+  if (value === 'es' || value.startsWith('es-')) {
+    return 'es-ES';
+  }
+
+  return 'en-US';
+}
+
+export default voiceInput;
