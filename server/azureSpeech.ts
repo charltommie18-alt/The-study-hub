@@ -11,18 +11,18 @@ const router = Router();
  *
  * AZURE_SPEECH_KEY must NEVER be placed in the React app.
  *
- * It belongs in the server environment variables:
+ * Server environment variables:
  *
  * AZURE_SPEECH_KEY
  * AZURE_SPEECH_REGION
  *
- * Supported languages:
+ * Supported:
  *
  * Afrikaans = af-ZA
  * English   = en-US
  * Spanish   = es-ES
  *
- * Afrikaans voices:
+ * Afrikaans:
  *
  * Male   = af-ZA-WillemNeural
  * Female = af-ZA-AdriNeural
@@ -71,11 +71,9 @@ type Gender =
   | 'male'
   | 'female';
 
-/*
- * ------------------------------------------------------------
- * Normalize language
- * ------------------------------------------------------------
- */
+// ============================================================
+// NORMALIZE LANGUAGE
+// ============================================================
 
 function normalizeLocale(
   language?: string,
@@ -102,30 +100,35 @@ function normalizeLocale(
     return 'es-ES';
   }
 
-  return 'en-US';
+  if (
+    value === 'en' ||
+    value.startsWith('en-') ||
+    value.includes('english')
+  ) {
+    return 'en-US';
+  }
+
+  // Server safe default.
+  return 'af-ZA';
 }
 
-/*
- * ------------------------------------------------------------
- * Normalize gender
- * ------------------------------------------------------------
- */
+// ============================================================
+// NORMALIZE GENDER
+// ============================================================
 
 function normalizeGender(
   gender?: string,
 ): Gender {
-  return String(gender)
+  return String(gender || '')
     .toLowerCase()
     .trim() === 'male'
     ? 'male'
     : 'female';
 }
 
-/*
- * ------------------------------------------------------------
- * Select Azure voice
- * ------------------------------------------------------------
- */
+// ============================================================
+// SELECT AZURE VOICE
+// ============================================================
 
 function getAzureVoice(
   locale: SupportedLocale,
@@ -133,9 +136,6 @@ function getAzureVoice(
 ): string {
   /*
    * AFRIKAANS IS STRICT.
-   *
-   * Never allow an English, Google,
-   * Gemini or browser voice here.
    */
   if (locale === 'af-ZA') {
     return gender === 'male'
@@ -143,16 +143,12 @@ function getAzureVoice(
       : AFRIKAANS_VOICES.female;
   }
 
-  return LANGUAGE_VOICES[
-    locale
-  ][gender];
+  return LANGUAGE_VOICES[locale][gender];
 }
 
-/*
- * ------------------------------------------------------------
- * Check Azure configuration
- * ------------------------------------------------------------
- */
+// ============================================================
+// CHECK AZURE CONFIGURATION
+// ============================================================
 
 function requireAzureConfig(): void {
   if (!AZURE_SPEECH_KEY) {
@@ -168,11 +164,9 @@ function requireAzureConfig(): void {
   }
 }
 
-/*
- * ------------------------------------------------------------
- * Escape XML
- * ------------------------------------------------------------
- */
+// ============================================================
+// ESCAPE XML
+// ============================================================
 
 function escapeXml(
   value: string,
@@ -200,25 +194,24 @@ function escapeXml(
     );
 }
 
-/*
- * ------------------------------------------------------------
- * Clean text
- * ------------------------------------------------------------
- */
+// ============================================================
+// CLEAN TEXT
+// ============================================================
 
 function cleanText(
   value: unknown,
 ): string {
   return String(value || '')
-    .replace(/\s+/g, ' ')
+    .replace(
+      /\s+/g,
+      ' ',
+    )
     .trim();
 }
 
-/*
- * ------------------------------------------------------------
- * Safe speed
- * ------------------------------------------------------------
- */
+// ============================================================
+// SAFE SPEED
+// ============================================================
 
 function safeSpeed(
   value: unknown,
@@ -228,7 +221,9 @@ function safeSpeed(
       ? value
       : Number(value);
 
-  if (!Number.isFinite(number)) {
+  if (
+    !Number.isFinite(number)
+  ) {
     return 1;
   }
 
@@ -241,15 +236,9 @@ function safeSpeed(
   );
 }
 
-/*
- * ------------------------------------------------------------
- * Convert playback speed to Azure SSML rate
- * ------------------------------------------------------------
- *
- * 1.0  = 0%
- * 0.5  = -50%
- * 2.0  = +100%
- */
+// ============================================================
+// SPEED TO SSML RATE
+// ============================================================
 
 function speedToRate(
   speed: number,
@@ -272,11 +261,9 @@ function speedToRate(
   }${percentage}%`;
 }
 
-/*
- * ------------------------------------------------------------
- * Safe volume
- * ------------------------------------------------------------
- */
+// ============================================================
+// SAFE VOLUME
+// ============================================================
 
 function safeVolume(
   value: unknown,
@@ -286,7 +273,9 @@ function safeVolume(
       ? value
       : Number(value);
 
-  if (!Number.isFinite(number)) {
+  if (
+    !Number.isFinite(number)
+  ) {
     return 1;
   }
 
@@ -299,11 +288,9 @@ function safeVolume(
   );
 }
 
-/*
- * ------------------------------------------------------------
- * Convert volume to SSML
- * ------------------------------------------------------------
- */
+// ============================================================
+// VOLUME TO SSML
+// ============================================================
 
 function volumeToSsml(
   volume: number,
@@ -323,28 +310,9 @@ function volumeToSsml(
   return 'loud';
 }
 
-/*
- * ============================================================
- * POST /api/voice/synthesize
- * ============================================================
- *
- * React sends:
- *
- * {
- *   text,
- *   language,
- *   locale,
- *   voice,
- *   gender,
- *   speed,
- *   volume
- * }
- *
- * Server talks to Azure.
- *
- * The Azure key never reaches the phone.
- * ============================================================
- */
+// ============================================================
+// POST /api/voice/synthesize
+// ============================================================
 
 router.post(
   '/voice/synthesize',
@@ -381,9 +349,10 @@ router.post(
         );
 
       /*
-       * NEVER trust a voice name sent by the client.
+       * NEVER trust the voice name supplied
+       * by the phone.
        *
-       * The server selects it itself.
+       * The server selects the voice.
        */
       const voice =
         getAzureVoice(
@@ -401,12 +370,7 @@ router.post(
           req.body?.volume,
         );
 
-      /*
-       * Keep pitch neutral.
-       *
-       * This deliberately removes the old
-       * "deep / normal / high" voice manipulation.
-       */
+      // Always neutral pitch.
       const pitch = '0%';
 
       const rate =
@@ -542,18 +506,9 @@ router.post(
   },
 );
 
-/*
- * ============================================================
- * POST /api/transcribe-audio
- * ============================================================
- *
- * Receives the base64 audio created by
- * aiAudioRecorder.ts.
- *
- * Azure Fast Transcription supports WebM,
- * OPUS/OGG, WAV, MP3 and other formats.
- * ============================================================
- */
+// ============================================================
+// POST /api/transcribe-audio
+// ============================================================
 
 router.post(
   '/transcribe-audio',
@@ -581,11 +536,11 @@ router.post(
       }
 
       /*
-       * The client sends either:
+       * Accept:
        *
        * data:audio/webm;base64,...
        *
-       * or raw base64.
+       * OR raw base64.
        */
       const match =
         audioData.match(
@@ -610,10 +565,11 @@ router.post(
           match[2];
       }
 
+      // IMPORTANT: remove whitespace correctly.
       base64 =
         base64.replace(
-         (/\s/g,
-          ''),
+          /\s/g,
+          '',
         );
 
       if (!base64) {
@@ -662,8 +618,8 @@ router.post(
         );
 
       /*
-       * Azure Fast Transcription expects
-       * multipart/form-data.
+       * Azure Fast Transcription
+       * uses multipart/form-data.
        */
       const form =
         new FormData();
@@ -693,9 +649,6 @@ router.post(
         }),
       );
 
-      /*
-       * Azure resource endpoint.
-       */
       const endpoint =
         `https://${AZURE_SPEECH_REGION}` +
         `.api.cognitive.microsoft.com` +
@@ -718,8 +671,7 @@ router.post(
         );
 
       const responseText =
-        await response
-          .text();
+        await response.text();
 
       if (!response.ok) {
         console.error(
@@ -752,13 +704,6 @@ router.post(
           });
       }
 
-      /*
-       * Fast transcription normally provides:
-       *
-       * combinedPhrases: [
-       *   { text: "..." }
-       * ]
-       */
       const combined =
         Array.isArray(
           data?.combinedPhrases,
@@ -779,9 +724,6 @@ router.post(
               .join(' ')
           : '';
 
-      /*
-       * Fallback to phrase results if needed.
-       */
       const phrases =
         Array.isArray(
           data?.phrases,
@@ -808,10 +750,6 @@ router.post(
             phrases,
         );
 
-      /*
-       * Remove accidental duplicated complete
-       * sentences that Azure may return.
-       */
       const finalTranscript =
         removeRepeatedText(
           transcript,
@@ -845,12 +783,9 @@ router.post(
     }
   },
 );
-
-/*
- * ------------------------------------------------------------
- * Audio filename
- * ------------------------------------------------------------
- */
+// ============================================================
+// AUDIO FILENAME
+// ============================================================
 
 function getAudioFilename(
   mimeType: string,
@@ -894,11 +829,9 @@ function getAudioFilename(
   return 'recording.webm';
 }
 
-/*
- * ------------------------------------------------------------
- * Remove repeated complete transcript
- * ------------------------------------------------------------
- */
+// ============================================================
+// REMOVE REPEATED TRANSCRIPT
+// ============================================================
 
 function removeRepeatedText(
   text: string,
@@ -911,7 +844,7 @@ function removeRepeatedText(
   }
 
   /*
-   * Exact repetition:
+   * Example:
    *
    * "Kan jy my hoor Kan jy my hoor"
    *
@@ -919,6 +852,7 @@ function removeRepeatedText(
    *
    * "Kan jy my hoor"
    */
+
   const words =
     clean.split(' ');
 
@@ -956,11 +890,9 @@ function removeRepeatedText(
   return clean;
 }
 
-/*
- * ------------------------------------------------------------
- * Health check
- * ------------------------------------------------------------
- */
+// ============================================================
+// HEALTH CHECK
+// ============================================================
 
 router.get(
   '/voice/health',
