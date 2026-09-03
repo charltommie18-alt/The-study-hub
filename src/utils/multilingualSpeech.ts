@@ -1,153 +1,220 @@
-// ============================================================
-// MULTILINGUAL AZURE VOICE ENGINE
-// ============================================================
+// StudyHub Multilingual Voice Engine
+// Device / Browser Text-to-Speech only.
+// No Azure, no paid speech API, no external speech server.
 //
-// Supported languages:
+// Languages:
+//   English  = en-US
+//   Afrikaans = af-ZA
+//   Spanish  = es-ES
 //
-// English:
-//   en-US-GuyNeural
-//   en-US-JennyNeural
-//
-// Afrikaans:
-//   af-ZA-WillemNeural
-//   af-ZA-AdriNeural
-//
-// Spanish:
-//   es-ES-AlvaroNeural
-//   es-ES-ElviraNeural
-//
-// IMPORTANT:
-// Afrikaans NEVER falls back to an English, Google,
-// browser or unrelated voice.
-// ============================================================
+// Afrikaans is NEVER silently changed to English.
+// If the device has no Afrikaans TTS voice installed,
+// the app reports that clearly instead.
+
+export type SupportedLanguage = 'af' | 'en' | 'es';
+export type SupportedLocale = 'af-ZA' | 'en-US' | 'es-ES';
+export type VoiceGender = 'male' | 'female';
 
 export interface LanguageConfig {
-  code: string;
+  code: SupportedLocale;
   name: string;
   nativeName: string;
   flag: string;
 }
 
-export interface VoiceGenderOption {
-  gender: 'male' | 'female';
+export interface FormattedVoiceOption {
+  voiceURI: string;
   name: string;
-  role: string;
-  avatar: string;
+  lang: string;
+  localService: boolean;
+  gender: VoiceGender;
+  isAfrikaans: boolean;
 }
 
-export const GENDER_VOICES: VoiceGenderOption[] = [
-  {
-    gender: 'male',
-    name: 'Manlik',
-    role: 'Afrikaanse manlike Azure-stem',
-    avatar: '👨',
-  },
-  {
-    gender: 'female',
-    name: 'Vroulik',
-    role: 'Afrikaanse vroulike Azure-stem',
-    avatar: '👩',
-  },
-];
+export interface SpeechPlaybackState {
+  isPlaying: boolean;
+  isPaused: boolean;
+  currentText: string;
+  playbackRate: number;
+  pitch: number;
+  volume: number;
+  selectedVoiceURI: string;
+  voiceGender: VoiceGender;
+  langCode: SupportedLocale;
+  detectedAfrikaansVoiceName?: string;
+}
 
 export interface VoiceSettings {
   preferredLanguage: string;
-
-  voiceGender: 'male' | 'female';
-
+  voiceGender: VoiceGender;
   voiceSpeed: number;
-
   autoReadAiResponses: boolean;
-
-  // Kept for compatibility.
-  // Pitch is controlled by the Azure server.
   voicePitch: number;
-
   voiceVolume: number;
-
-  // Compatibility only.
-  // NEVER trusted for Afrikaans.
   selectedVoiceURI?: string;
-
   forceAfrikaansVoice?: boolean;
 }
 
-export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
-  preferredLanguage: 'af',
-  voiceGender: 'female',
-  voiceSpeed: 1,
-  autoReadAiResponses: true,
-  voicePitch: 1,
-  voiceVolume: 1,
-  forceAfrikaansVoice: true,
-};
+export interface SpeechRequest {
+  text: string;
+  language?: string;
+  gender?: VoiceGender;
+  speed?: number;
+  volume?: number;
+  pitch?: number;
+  voiceURI?: string;
+}
 
-// ============================================================
-// LANGUAGES
-// ============================================================
+export interface SpeechResponse {
+  audioUrl?: string;
+  audioBase64?: string;
+  voice: string;
+  locale: string;
+  mimeType?: string;
+  success?: boolean;
+}
 
 export const LANGUAGES: LanguageConfig[] = [
   {
-    code: 'en',
+    code: 'en-US',
     name: 'English',
     nativeName: 'English',
     flag: '🇬🇧',
   },
   {
-    code: 'af',
+    code: 'af-ZA',
     name: 'Afrikaans',
     nativeName: 'Afrikaans',
     flag: '🇿🇦',
   },
   {
-    code: 'es',
+    code: 'es-ES',
     name: 'Spanish',
     nativeName: 'Español',
     flag: '🇪🇸',
   },
 ];
 
-// ============================================================
-// AZURE VOICES
-// ============================================================
+export const SUPPORTED_LANGUAGES = LANGUAGES;
 
-export const AZURE_AFRIKAANS_VOICES = {
-  male: 'af-ZA-WillemNeural',
-  female: 'af-ZA-AdriNeural',
-} as const;
-
-export const AZURE_VOICES: Record<
-  string,
-  Record<'male' | 'female', string>
-> = {
-  af: {
-    male: AZURE_AFRIKAANS_VOICES.male,
-    female: AZURE_AFRIKAANS_VOICES.female,
+export const GENDER_VOICES = [
+  {
+    gender: 'male' as const,
+    name: 'Manlik',
+    role: 'Afrikaanse Manlike Stem',
+    avatar: '👨',
   },
-
-  en: {
-    male: 'en-US-GuyNeural',
-    female: 'en-US-JennyNeural',
+  {
+    gender: 'female' as const,
+    name: 'Vroulik',
+    role: 'Afrikaanse Vroulike Stem',
+    avatar: '👩',
   },
+];
 
-  es: {
-    male: 'es-ES-AlvaroNeural',
-    female: 'es-ES-ElviraNeural',
-  },
+export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+  preferredLanguage: 'af-ZA',
+  voiceGender: 'male',
+  voiceSpeed: 1,
+  autoReadAiResponses: true,
+
+  // Kept only for compatibility with older settings.
+  // The UI does NOT expose pitch controls.
+  voicePitch: 1,
+
+  voiceVolume: 1,
+
+  // Device voice is selected automatically.
+  forceAfrikaansVoice: true,
 };
 
-// ============================================================
-// LANGUAGE NORMALIZATION
-// ============================================================
+const STORAGE_KEY = 'studyhub_voice_settings';
+
+let speechState: SpeechPlaybackState = {
+  isPlaying: false,
+  isPaused: false,
+  currentText: '',
+  playbackRate: 1,
+  pitch: 1,
+  volume: 1,
+  selectedVoiceURI: '',
+  voiceGender: 'male',
+  langCode: 'af-ZA',
+};
+
+const stateListeners = new Set<
+  (state: SpeechPlaybackState) => void
+>();
+
+const voicesListeners = new Set<
+  (voices: FormattedVoiceOption[]) => void
+>();
+
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+let speechGeneration = 0;
+
+function emitState(): void {
+  const copy = { ...speechState };
+
+  stateListeners.forEach((listener) => {
+    try {
+      listener(copy);
+    } catch {
+      // Listener errors must never break speech.
+    }
+  });
+}
+
+function emitVoices(): void {
+  const voices = getAvailableSystemVoices();
+
+  voicesListeners.forEach((listener) => {
+    try {
+      listener(voices);
+    } catch {
+      // Ignore listener errors.
+    }
+  });
+}
+
+function clamp(
+  value: number,
+  min: number,
+  max: number,
+): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function safeSpeed(value?: number): number {
+  return clamp(
+    typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : 1,
+    0.5,
+    2,
+  );
+}
+
+function safeVolume(value?: number): number {
+  return clamp(
+    typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : 1,
+    0,
+    1,
+  );
+}
+
+function cleanSpeechText(text: string): string {
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function normalizeLanguage(
   language?: string,
-): 'af' | 'en' | 'es' {
-  if (!language) {
-    return 'af';
-  }
-
-  const value = String(language)
+): SupportedLanguage {
+  const value = String(language || '')
     .toLowerCase()
     .trim();
 
@@ -168,28 +235,19 @@ export function normalizeLanguage(
     return 'es';
   }
 
-  if (
-    value === 'en' ||
-    value.startsWith('en-') ||
-    value.includes('english')
-  ) {
-    return 'en';
-  }
-
-  // Safe default.
-  return 'af';
+  return 'en';
 }
 
-// ============================================================
-// AZURE LOCALE
-// ============================================================
-
-export function getAzureLocale(
+export function validateLanguageCode(
   language?: string,
-): 'af-ZA' | 'en-US' | 'es-ES' {
-  const normalized = normalizeLanguage(language);
+): SupportedLocale {
+  return getSpeechLanguage(language) as SupportedLocale;
+}
 
-  switch (normalized) {
+export function getSpeechLanguage(
+  language?: string,
+): SupportedLocale {
+  switch (normalizeLanguage(language)) {
     case 'af':
       return 'af-ZA';
 
@@ -202,61 +260,11 @@ export function getAzureLocale(
   }
 }
 
-// ============================================================
-// AZURE VOICE
-// ============================================================
-
-export function getAzureVoice(
+export function getLocaleForLanguage(
   language?: string,
-  gender: 'male' | 'female' = 'female',
-): string {
-  const normalized = normalizeLanguage(language);
-
-  // Afrikaans is strictly locked to Azure Afrikaans.
-  if (normalized === 'af') {
-    return gender === 'male'
-      ? AZURE_AFRIKAANS_VOICES.male
-      : AZURE_AFRIKAANS_VOICES.female;
-  }
-
-  return (
-    AZURE_VOICES[normalized]?.[gender] ||
-    AZURE_VOICES.en.female
-  );
+): SupportedLocale {
+  return getSpeechLanguage(language);
 }
-
-// ============================================================
-// VOICE + LOCALE
-// ============================================================
-
-export function getVoiceForLanguage(
-  language?: string,
-  gender: 'male' | 'female' = 'female',
-): {
-  locale: string;
-  voice: string;
-} {
-  const normalized = normalizeLanguage(language);
-
-  if (normalized === 'af') {
-    return {
-      locale: 'af-ZA',
-      voice:
-        gender === 'male'
-          ? AZURE_AFRIKAANS_VOICES.male
-          : AZURE_AFRIKAANS_VOICES.female,
-    };
-  }
-
-  return {
-    locale: getAzureLocale(normalized),
-    voice: getAzureVoice(normalized, gender),
-  };
-}
-
-// ============================================================
-// LANGUAGE HELPERS
-// ============================================================
 
 export function isAfrikaans(
   language?: string,
@@ -264,123 +272,581 @@ export function isAfrikaans(
   return normalizeLanguage(language) === 'af';
 }
 
-export function getAfrikaansVoice(
-  gender: 'male' | 'female',
+function getBrowserVoices(): SpeechSynthesisVoice[] {
+  if (
+    typeof window === 'undefined' ||
+    !('speechSynthesis' in window)
+  ) {
+    return [];
+  }
+
+  try {
+    return window.speechSynthesis.getVoices() || [];
+  } catch {
+    return [];
+  }
+}
+
+function getVoiceLanguage(
+  voice: SpeechSynthesisVoice,
 ): string {
-  return gender === 'male'
-    ? AZURE_AFRIKAANS_VOICES.male
-    : AZURE_AFRIKAANS_VOICES.female;
+  return String(voice.lang || '').toLowerCase();
 }
 
-// ============================================================
-// REQUEST TYPES
-// ============================================================
+function isVoiceForLocale(
+  voice: SpeechSynthesisVoice,
+  locale: SupportedLocale,
+): boolean {
+  const lang = getVoiceLanguage(voice);
+  const target = locale.toLowerCase();
 
-export interface SpeechRequest {
-  text: string;
-  language?: string;
-  gender?: 'male' | 'female';
-  speed?: number;
-  volume?: number;
-  pitch?: number;
+  if (lang === target) {
+    return true;
+  }
+
+  return lang.startsWith(
+    `${target.substring(0, 2)}-`,
+  );
 }
 
-export interface SpeechResponse {
-  audioUrl?: string;
-  audioBase64?: string;
-  voice: string;
-  locale: string;
-  mimeType?: string;
-  success?: boolean;
-}
+function guessGender(
+  voice: SpeechSynthesisVoice,
+): VoiceGender {
+  const value =
+    `${voice.name} ${voice.voiceURI}`.toLowerCase();
 
-// ============================================================
-// API BASE URL
-// ============================================================
+  const maleWords = [
+    'male',
+    'man',
+    'guy',
+    'david',
+    'daniel',
+    'george',
+    'mark',
+    'james',
+    'john',
+    'alex',
+    'tom',
+    'willem',
+    'thomas',
+    'oliver',
+  ];
 
-function getApiBaseUrl(): string {
-  const configured =
-    typeof import.meta !== 'undefined'
-      ? (import.meta as any).env?.VITE_API_URL
-      : undefined;
+  const femaleWords = [
+    'female',
+    'woman',
+    'girl',
+    'jenny',
+    'samantha',
+    'susan',
+    'victoria',
+    'zira',
+    'karen',
+    'sarah',
+    'emma',
+    'ava',
+    'anna',
+    'adri',
+  ];
 
-  if (configured) {
-    return String(configured).replace(/\/+$/, '');
+  if (maleWords.some((word) => value.includes(word))) {
+    return 'male';
   }
 
   if (
-    typeof window !== 'undefined' &&
-    window.location?.origin
+    femaleWords.some((word) =>
+      value.includes(word),
+    )
   ) {
-    return window.location.origin;
+    return 'female';
   }
 
-  return '';
+  // Unknown voices default to female only for
+  // gender filtering. The actual device voice
+  // is still used.
+  return 'female';
 }
 
-// ============================================================
-// HEADERS
-// ============================================================
+function formatBrowserVoices(): FormattedVoiceOption[] {
+  return getBrowserVoices().map((voice) => ({
+    voiceURI: voice.voiceURI || voice.name,
+    name: voice.name,
+    lang: voice.lang,
+    localService: voice.localService,
+    gender: guessGender(voice),
+    isAfrikaans:
+      getVoiceLanguage(voice).startsWith('af'),
+  }));
+}
 
-function buildHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
+export function getAvailableSystemVoices(): FormattedVoiceOption[] {
+  return formatBrowserVoices();
+}
+
+export function subscribeVoicesList(
+  listener: (
+    voices: FormattedVoiceOption[],
+  ) => void,
+): () => void {
+  voicesListeners.add(listener);
+  listener(getAvailableSystemVoices());
+
+  if (
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window
+  ) {
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      emitVoices,
+    );
+  }
+
+  return () => {
+    voicesListeners.delete(listener);
+
+    if (
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window
+    ) {
+      window.speechSynthesis.removeEventListener(
+        'voiceschanged',
+        emitVoices,
+      );
+    }
   };
 }
 
-// ============================================================
-// TEXT CLEANING
-// ============================================================
+export function findAfrikaansBrowserVoice(
+  gender?: VoiceGender,
+): SpeechSynthesisVoice | null {
+  const voices = getBrowserVoices().filter(
+    (voice) =>
+      getVoiceLanguage(voice).startsWith('af'),
+  );
 
-function cleanSpeechText(
-  text: string,
+  if (!voices.length) {
+    return null;
+  }
+
+  if (gender) {
+    const matching = voices.find(
+      (voice) =>
+        guessGender(voice) === gender,
+    );
+
+    if (matching) {
+      return matching;
+    }
+  }
+
+  return voices[0];
+}
+
+function findBestVoice(
+  locale: SupportedLocale,
+  gender: VoiceGender,
+  selectedVoiceURI?: string,
+): SpeechSynthesisVoice | null {
+  const voices = getBrowserVoices();
+
+  if (!voices.length) {
+    return null;
+  }
+
+  if (selectedVoiceURI) {
+    const selected = voices.find(
+      (voice) =>
+        voice.voiceURI === selectedVoiceURI ||
+        voice.name === selectedVoiceURI,
+    );
+
+    if (
+      selected &&
+      isVoiceForLocale(selected, locale)
+    ) {
+      return selected;
+    }
+  }
+
+  const localeVoices = voices.filter(
+    (voice) =>
+      isVoiceForLocale(voice, locale),
+  );
+
+  if (!localeVoices.length) {
+    return null;
+  }
+
+  const genderMatch = localeVoices.find(
+    (voice) =>
+      guessGender(voice) === gender,
+  );
+
+  return genderMatch || localeVoices[0];
+}
+
+function getCurrentVoice(
+  language: SupportedLocale,
+  gender: VoiceGender,
+  selectedVoiceURI?: string,
+): SpeechSynthesisVoice | null {
+  // Afrikaans is deliberately strict.
+  // Never substitute English for Afrikaans.
+  if (language === 'af-ZA') {
+    return findAfrikaansBrowserVoice(
+      gender,
+    );
+  }
+
+  return findBestVoice(
+    language,
+    gender,
+    selectedVoiceURI,
+  );
+}
+
+export function getAfrikaansVoice(
+  gender: VoiceGender,
 ): string {
-  return String(text || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+  const voice = findAfrikaansBrowserVoice(gender);
 
-// ============================================================
-// VALUE SAFETY
-// ============================================================
-
-function safeSpeed(
-  speed?: number,
-): number {
-  const value =
-    typeof speed === 'number'
-      ? speed
-      : 1;
-
-  return Math.max(
-    0.5,
-    Math.min(2, value),
+  return (
+    voice?.voiceURI ||
+    voice?.name ||
+    ''
   );
 }
 
-function safeVolume(
-  volume?: number,
-): number {
-  const value =
-    typeof volume === 'number'
-      ? volume
-      : 1;
+export function getVoiceForLanguage(
+  language?: string,
+  gender: VoiceGender = 'female',
+): {
+  locale: string;
+  voice: string;
+} {
+  const locale = getSpeechLanguage(language);
+  const voice = getCurrentVoice(
+    locale,
+    gender,
+  );
 
-  return Math.max(
-    0,
-    Math.min(1, value),
+  return {
+    locale,
+    voice:
+      voice?.voiceURI ||
+      voice?.name ||
+      '',
+  };
+}
+
+export function getSelectedVoice(
+  language?: string,
+  gender: VoiceGender = 'female',
+  selectedVoiceURI?: string,
+): SpeechSynthesisVoice | null {
+  const locale = getSpeechLanguage(language);
+
+  return getCurrentVoice(
+    locale,
+    gender,
+    selectedVoiceURI,
+  );
+}
+export function getSpeechState(): SpeechPlaybackState {
+  return { ...speechState };
+}
+
+export function subscribeSpeechState(
+  listener: (
+    state: SpeechPlaybackState,
+  ) => void,
+): () => void {
+  stateListeners.add(listener);
+  listener({ ...speechState });
+
+  return () => {
+    stateListeners.delete(listener);
+  };
+}
+
+export function loadVoiceSettings(): VoiceSettings {
+  if (typeof window === 'undefined') {
+    return { ...DEFAULT_VOICE_SETTINGS };
+  }
+
+  try {
+    const stored =
+      window.localStorage.getItem(
+        STORAGE_KEY,
+      );
+
+    if (!stored) {
+      return {
+        ...DEFAULT_VOICE_SETTINGS,
+      };
+    }
+
+    const parsed = JSON.parse(stored);
+
+    const language =
+      getSpeechLanguage(
+        parsed.preferredLanguage ||
+          DEFAULT_VOICE_SETTINGS.preferredLanguage,
+      );
+
+    const gender: VoiceGender =
+      parsed.voiceGender === 'female'
+        ? 'female'
+        : 'male';
+
+    return {
+      ...DEFAULT_VOICE_SETTINGS,
+      ...parsed,
+      preferredLanguage: language,
+      voiceGender: gender,
+      voiceSpeed: safeSpeed(
+        parsed.voiceSpeed,
+      ),
+      voiceVolume: safeVolume(
+        parsed.voiceVolume,
+      ),
+
+      // Pitch is intentionally fixed.
+      voicePitch: 1,
+
+      forceAfrikaansVoice: true,
+    };
+  } catch {
+    return {
+      ...DEFAULT_VOICE_SETTINGS,
+    };
+  }
+}
+
+function saveVoiceSettings(
+  settings: VoiceSettings,
+): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(settings),
+    );
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function updateState(
+  changes: Partial<SpeechPlaybackState>,
+): void {
+  speechState = {
+    ...speechState,
+    ...changes,
+  };
+
+  emitState();
+}
+
+function getSettings(): VoiceSettings {
+  return loadVoiceSettings();
+}
+
+function saveAndApplySettings(
+  changes: Partial<VoiceSettings>,
+): VoiceSettings {
+  const settings: VoiceSettings = {
+    ...getSettings(),
+    ...changes,
+  };
+
+  // Never allow pitch settings to alter the voice.
+  settings.voicePitch = 1;
+
+  saveVoiceSettings(settings);
+
+  return settings;
+}
+
+export function setVoiceGender(
+  gender: VoiceGender,
+): void {
+  const settings =
+    saveAndApplySettings({
+      voiceGender: gender,
+    });
+
+  const locale = getSpeechLanguage(
+    settings.preferredLanguage,
+  );
+
+  const voice = getCurrentVoice(
+    locale,
+    gender,
+    settings.selectedVoiceURI,
+  );
+
+  updateState({
+    voiceGender: gender,
+    selectedVoiceURI:
+      voice?.voiceURI ||
+      voice?.name ||
+      '',
+    detectedAfrikaansVoiceName:
+      locale === 'af-ZA'
+        ? voice?.name
+        : undefined,
+  });
+
+  if (speechState.isPlaying) {
+    void restartSpeech();
+  }
+}
+
+export function setSelectedVoiceURI(
+  voiceURI: string,
+): void {
+  const settings = getSettings();
+
+  const locale = getSpeechLanguage(
+    settings.preferredLanguage,
+  );
+
+  const voices = getBrowserVoices();
+
+  const selected = voices.find(
+    (voice) =>
+      voice.voiceURI === voiceURI ||
+      voice.name === voiceURI,
+  );
+
+  // Do not allow an English/Spanish voice
+  // to be selected while Afrikaans is active.
+  if (
+    locale === 'af-ZA' &&
+    (!selected ||
+      !getVoiceLanguage(selected).startsWith('af'))
+  ) {
+    return;
+  }
+
+  const updated =
+    saveAndApplySettings({
+      selectedVoiceURI: voiceURI,
+    });
+
+  updateState({
+    selectedVoiceURI: voiceURI,
+  });
+
+  if (speechState.isPlaying) {
+    void restartSpeech();
+  }
+}
+
+export function setSpeechRate(
+  rate: number,
+): void {
+  const safe = safeSpeed(rate);
+
+  saveAndApplySettings({
+    voiceSpeed: safe,
+  });
+
+  updateState({
+    playbackRate: safe,
+  });
+}
+
+export function setSpeechVolume(
+  volume: number,
+): void {
+  const safe = safeVolume(volume);
+
+  saveAndApplySettings({
+    voiceVolume: safe,
+  });
+
+  updateState({
+    volume: safe,
+  });
+}
+
+export function setSpeechPitch(
+  _pitch: number,
+): void {
+  // Kept for compatibility with older code.
+  // Pitch is intentionally fixed at neutral.
+  saveAndApplySettings({
+    voicePitch: 1,
+  });
+
+  updateState({
+    pitch: 1,
+  });
+}
+
+export function applyVoicePreset(
+  preset:
+    | 'male'
+    | 'female'
+    | 'normal'
+    | string,
+): void {
+  if (
+    preset === 'male' ||
+    preset === 'female'
+  ) {
+    setVoiceGender(preset);
+    return;
+  }
+
+  // No pitch presets are used.
+  saveAndApplySettings({
+    voicePitch: 1,
+  });
+
+  updateState({
+    pitch: 1,
+  });
+}
+
+export function validateVoiceSelection(
+  language: string,
+  gender: VoiceGender,
+  selectedVoice?: string,
+): string {
+  const locale =
+    getSpeechLanguage(language);
+
+  const voice = getCurrentVoice(
+    locale,
+    gender,
+    selectedVoice,
+  );
+
+  return (
+    voice?.voiceURI ||
+    voice?.name ||
+    ''
   );
 }
 
-// ============================================================
-// SYNTHESIS
-// ============================================================
+export function getSupportedVoiceNames(): string[] {
+  return getAvailableSystemVoices().map(
+    (voice) => voice.name,
+  );
+}
 
 export async function synthesizeSpeech(
   request: SpeechRequest,
 ): Promise<SpeechResponse> {
-  const text = cleanSpeechText(request.text);
+  const text = cleanSpeechText(
+    request.text,
+  );
 
   if (!text) {
     throw new Error(
@@ -388,180 +854,43 @@ export async function synthesizeSpeech(
     );
   }
 
-  const language =
-    normalizeLanguage(request.language);
+  const locale = getSpeechLanguage(
+    request.language,
+  );
 
-  const gender =
-    request.gender === 'male'
-      ? 'male'
-      : 'female';
+  const gender: VoiceGender =
+    request.gender === 'female'
+      ? 'female'
+      : 'male';
 
-  const voice =
-    getAzureVoice(language, gender);
+  const voice = getCurrentVoice(
+    locale,
+    gender,
+    request.voiceURI,
+  );
 
-  const locale =
-    getAzureLocale(language);
+  if (!voice) {
+    if (locale === 'af-ZA') {
+      throw new Error(
+        'Geen Afrikaanse stem is op hierdie toestel geïnstalleer nie. Installeer of aktiveer ’n Afrikaans (Suid-Afrika) TTS-stem in jou Android Teks-na-spraak instellings.',
+      );
+    }
 
-  // Afrikaans can ONLY use the two Azure Afrikaans voices.
-  if (
-    language === 'af' &&
-    voice !== AZURE_AFRIKAANS_VOICES.male &&
-    voice !== AZURE_AFRIKAANS_VOICES.female
-  ) {
     throw new Error(
-      'Invalid Afrikaans voice selected.',
+      `No ${locale} text-to-speech voice is available on this device.`,
     );
   }
 
-  const baseUrl = getApiBaseUrl();
-
-  const response = await fetch(
-    `${baseUrl}/api/voice/synthesize`,
-    {
-      method: 'POST',
-      headers: buildHeaders(),
-      body: JSON.stringify({
-        text,
-        language,
-        locale,
-        voice,
-        gender,
-        speed: safeSpeed(request.speed),
-        volume: safeVolume(request.volume),
-
-        // Always neutral.
-        pitch: 1,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    let message =
-      'Speech synthesis failed.';
-
-    try {
-      const data =
-        await response.json();
-
-      if (data?.error) {
-        message = String(data.error);
-      }
-    } catch {
-      // Keep default error.
-    }
-
-    throw new Error(message);
-  }
-
-  const data =
-    (await response.json()) as SpeechResponse;
-
   return {
-    ...data,
-
+    success: true,
     voice:
-      data.voice || voice,
-
-    locale:
-      data.locale || locale,
+      voice.voiceURI ||
+      voice.name,
+    locale,
+    mimeType:
+      'application/x-device-tts',
   };
 }
-
-// ============================================================
-// AUDIO CONVERSION
-// ============================================================
-
-function base64ToBlob(
-  base64: string,
-  mimeType = 'audio/mpeg',
-): Blob {
-  const byteCharacters = atob(base64);
-
-  const byteArrays: Uint8Array[] = [];
-
-  for (
-    let offset = 0;
-    offset < byteCharacters.length;
-    offset += 512
-  ) {
-    const slice =
-      byteCharacters.slice(
-        offset,
-        offset + 512,
-      );
-
-    const bytes =
-      new Uint8Array(slice.length);
-
-    for (
-      let i = 0;
-      i < slice.length;
-      i += 1
-    ) {
-      bytes[i] =
-        slice.charCodeAt(i);
-    }
-
-    byteArrays.push(bytes);
-  }
-
-  return new Blob(
-    byteArrays,
-    {
-      type: mimeType,
-    },
-  );
-}
-
-// ============================================================
-// CURRENT AUDIO
-// ============================================================
-
-let currentAudio:
-  HTMLAudioElement | null = null;
-
-let currentObjectUrl:
-  string | null = null;
-
-let speechGeneration = 0;
-
-// ============================================================
-// STOP SPEECH
-// ============================================================
-
-export function stopSpeech(): void {
-  speechGeneration += 1;
-
-  if (currentAudio) {
-    try {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      currentAudio.src = '';
-    } catch {
-      // Ignore.
-    }
-
-    currentAudio.onended = null;
-    currentAudio.onerror = null;
-    currentAudio = null;
-  }
-
-  if (currentObjectUrl) {
-    try {
-      URL.revokeObjectURL(
-        currentObjectUrl,
-      );
-    } catch {
-      // Ignore.
-    }
-
-    currentObjectUrl = null;
-  }
-}
-
-// ============================================================
-// SPEAK
-// ============================================================
 
 export async function speak(
   text: string,
@@ -574,378 +903,368 @@ export async function speak(
     return;
   }
 
+  if (
+    typeof window === 'undefined' ||
+    !('speechSynthesis' in window)
+  ) {
+    throw new Error(
+      'Text-to-speech is not available on this device.',
+    );
+  }
+
   stopSpeech();
 
   const myGeneration =
     speechGeneration;
 
   const merged: VoiceSettings = {
-    ...DEFAULT_VOICE_SETTINGS,
+    ...getSettings(),
     ...settings,
   };
 
-  const language =
-    normalizeLanguage(
+  const locale =
+    getSpeechLanguage(
       merged.preferredLanguage,
     );
 
-  const gender =
-    merged.voiceGender === 'male'
-      ? 'male'
-      : 'female';
+  const gender: VoiceGender =
+    merged.voiceGender === 'female'
+      ? 'female'
+      : 'male';
 
-  const result =
-    await synthesizeSpeech({
-      text: cleanText,
-      language,
-      gender,
-      speed: merged.voiceSpeed,
-      volume: merged.voiceVolume,
-      pitch: 1,
-    });
-
-  if (
-    myGeneration !==
-    speechGeneration
-  ) {
-    return;
-  }
-
-  // ==========================================================
-  // BASE64 AUDIO
-  // ==========================================================
-
-  if (result.audioBase64) {
-    const blob =
-      base64ToBlob(
-        result.audioBase64,
-        result.mimeType ||
-          'audio/mpeg',
-      );
-
-    const objectUrl =
-      URL.createObjectURL(blob);
-
-    if (
-      myGeneration !==
-      speechGeneration
-    ) {
-      URL.revokeObjectURL(
-        objectUrl,
-      );
-
-      return;
-    }
-
-    currentObjectUrl =
-      objectUrl;
-
-    const audio =
-      new Audio(objectUrl);
-
-    currentAudio =
-      audio;
-
-    audio.volume =
-      safeVolume(
-        merged.voiceVolume,
-      );
-
-    await new Promise<void>(
-      (
-        resolve,
-        reject,
-      ) => {
-        audio.onended = () => {
-          if (
-            currentAudio ===
-            audio
-          ) {
-            currentAudio =
-              null;
-          }
-
-          if (
-            currentObjectUrl ===
-            objectUrl
-          ) {
-            try {
-              URL.revokeObjectURL(
-                objectUrl,
-              );
-            } catch {
-              // Ignore.
-            }
-
-            currentObjectUrl =
-              null;
-          }
-
-          resolve();
-        };
-
-        audio.onerror = () => {
-          if (
-            currentAudio ===
-            audio
-          ) {
-            currentAudio =
-              null;
-          }
-
-          if (
-            currentObjectUrl ===
-            objectUrl
-          ) {
-            try {
-              URL.revokeObjectURL(
-                objectUrl,
-              );
-            } catch {
-              // Ignore.
-            }
-
-            currentObjectUrl =
-              null;
-          }
-
-          reject(
-            new Error(
-              'Unable to play generated speech.',
-            ),
-          );
-        };
-
-        if (
-          myGeneration !==
-          speechGeneration
-        ) {
-          resolve();
-          return;
-        }
-
-        audio
-          .play()
-          .catch(reject);
-      },
-    );
-
-    return;
-    }
-    // ==========================================================
-  // AUDIO URL
-  // ==========================================================
-
-  if (result.audioUrl) {
-    if (
-      myGeneration !==
-      speechGeneration
-    ) {
-      return;
-    }
-
-    const audio =
-      new Audio(
-        result.audioUrl,
-      );
-
-    currentAudio =
-      audio;
-
-    audio.volume =
-      safeVolume(
-        merged.voiceVolume,
-      );
-
-    await new Promise<void>(
-      (
-        resolve,
-        reject,
-      ) => {
-        audio.onended =
-          () => {
-            if (
-              currentAudio ===
-              audio
-            ) {
-              currentAudio =
-                null;
-            }
-
-            resolve();
-          };
-
-        audio.onerror =
-          () => {
-            if (
-              currentAudio ===
-              audio
-            ) {
-              currentAudio =
-                null;
-            }
-
-            reject(
-              new Error(
-                'Unable to play generated speech.',
-              ),
-            );
-          };
-
-        if (
-          myGeneration !==
-          speechGeneration
-        ) {
-          resolve();
-
-          return;
-        }
-
-        audio
-          .play()
-          .catch(
-            reject,
-          );
-      },
-    );
-
-    return;
-  }
-
-  throw new Error(
-    'No audio was returned by the voice server.',
+  const voice = getCurrentVoice(
+    locale,
+    gender,
+    merged.selectedVoiceURI,
   );
-}
 
-// ============================================================
-// AFRIKAANS SPEECH
-// ============================================================
+  if (!voice) {
+    if (locale === 'af-ZA') {
+      throw new Error(
+        'Geen Afrikaanse TTS-stem is op hierdie toestel beskikbaar nie.',
+      );
+    }
 
-export async function speakAfrikaans(
-  text: string,
-  gender:
-    | 'male'
-    | 'female' = 'female',
-  settings: Partial<VoiceSettings> = {},
-): Promise<void> {
-  return speak(
-    text,
-    {
-      ...settings,
+    throw new Error(
+      `No ${locale} TTS voice is available on this device.`,
+    );
+  }
 
-      // Force Afrikaans.
-      preferredLanguage: 'af',
+  const utterance =
+    new SpeechSynthesisUtterance(
+      cleanText,
+    );
 
-      voiceGender: gender,
+  utterance.lang = locale;
+  utterance.voice = voice;
 
-      forceAfrikaansVoice: true,
+  utterance.rate = safeSpeed(
+    merged.voiceSpeed,
+  );
+
+  utterance.volume = safeVolume(
+    merged.voiceVolume,
+  );
+
+  // Always neutral.
+  utterance.pitch = 1;
+
+  currentUtterance = utterance;
+
+  updateState({
+    isPlaying: true,
+    isPaused: false,
+    currentText: cleanText,
+    playbackRate: utterance.rate,
+    pitch: 1,
+    volume: utterance.volume,
+    selectedVoiceURI:
+      voice.voiceURI ||
+      voice.name,
+    voiceGender: gender,
+    langCode: locale,
+    detectedAfrikaansVoiceName:
+      locale === 'af-ZA'
+        ? voice.name
+        : undefined,
+  });
+
+  await new Promise<void>(
+    (resolve, reject) => {
+      utterance.onstart = () => {
+        if (
+          myGeneration !==
+          speechGeneration
+        ) {
+          return;
+        }
+
+        updateState({
+          isPlaying: true,
+          isPaused: false,
+        });
+      };
+
+      utterance.onpause = () => {
+        if (
+          myGeneration !==
+          speechGeneration
+        ) {
+          return;
+        }
+
+        updateState({
+          isPlaying: true,
+          isPaused: true,
+        });
+      };
+
+      utterance.onresume = () => {
+        if (
+          myGeneration !==
+          speechGeneration
+        ) {
+          return;
+        }
+
+        updateState({
+          isPlaying: true,
+          isPaused: false,
+        });
+      };
+
+      utterance.onend = () => {
+        if (
+          currentUtterance ===
+          utterance
+        ) {
+          currentUtterance = null;
+        }
+
+        if (
+          myGeneration ===
+          speechGeneration
+        ) {
+          updateState({
+            isPlaying: false,
+            isPaused: false,
+          });
+        }
+
+        resolve();
+      };
+
+      utterance.onerror = (
+        event,
+      ) => {
+        if (
+          currentUtterance ===
+          utterance
+        ) {
+          currentUtterance = null;
+        }
+
+        if (
+          myGeneration ===
+          speechGeneration
+        ) {
+          updateState({
+            isPlaying: false,
+            isPaused: false,
+          });
+        }
+
+        if (
+          event.error ===
+          'canceled'
+        ) {
+          resolve();
+          return;
+        }
+
+        reject(
+          new Error(
+            `Text-to-speech error: ${event.error || 'unknown error'}`,
+          ),
+        );
+      };
+
+      try {
+        window.speechSynthesis.speak(
+          utterance,
+        );
+      } catch (error) {
+        reject(error);
+      }
     },
   );
 }
 
-// ============================================================
-// SUPPORTED VOICES
-// ============================================================
+export async function speakAfrikaans(
+  text: string,
+  gender: VoiceGender = 'male',
+  settings: Partial<VoiceSettings> = {},
+): Promise<void> {
+  return speak(text, {
+    ...settings,
 
-export function getSupportedVoiceNames(): string[] {
-  return [
-    AZURE_AFRIKAANS_VOICES.male,
-    AZURE_AFRIKAANS_VOICES.female,
+    // Hard-lock Afrikaans.
+    preferredLanguage: 'af-ZA',
 
-    AZURE_VOICES.en.male,
-    AZURE_VOICES.en.female,
-
-    AZURE_VOICES.es.male,
-    AZURE_VOICES.es.female,
-  ];
+    voiceGender: gender,
+    forceAfrikaansVoice: true,
+  });
 }
 
-// ============================================================
-// VOICE VALIDATION
-// ============================================================
-
-export function validateVoiceSelection(
-  language: string,
-  gender:
-    | 'male'
-    | 'female',
-  selectedVoice?: string,
-): string {
-  const normalized =
-    normalizeLanguage(
-      language,
-    );
-
-  const expected =
-    getAzureVoice(
-      normalized,
-      gender,
-    );
-
-  /*
-   * Afrikaans is STRICT.
-   *
-   * No browser voice.
-   * No Google voice.
-   * No Gemini voice.
-   * No English voice.
-   * No unrelated voice.
-   */
+export function togglePauseSpeech(): void {
   if (
-    normalized === 'af'
+    typeof window === 'undefined' ||
+    !('speechSynthesis' in window)
   ) {
+    return;
+  }
+
+  try {
     if (
-      selectedVoice !==
-        AZURE_AFRIKAANS_VOICES.male &&
-      selectedVoice !==
-        AZURE_AFRIKAANS_VOICES.female
+      window.speechSynthesis.paused
     ) {
-      return expected;
+      window.speechSynthesis.resume();
+
+      updateState({
+        isPlaying: true,
+        isPaused: false,
+      });
+
+      return;
+    }
+
+    if (
+      window.speechSynthesis.speaking
+    ) {
+      window.speechSynthesis.pause();
+
+      updateState({
+        isPlaying: true,
+        isPaused: true,
+      });
+    }
+  } catch {
+    // Ignore pause/resume errors.
+  }
+}
+
+export async function restartSpeech(): Promise<void> {
+  const text =
+    speechState.currentText;
+
+  if (!text) {
+    return;
+  }
+
+  const settings =
+    loadVoiceSettings();
+
+  await speak(text, settings);
+}
+
+export function stopSpeech(): void {
+  speechGeneration += 1;
+
+  if (
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window
+  ) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore.
     }
   }
 
-  /*
-   * English and Spanish are also
-   * restricted to configured Azure voices.
-   */
-  if (
-    selectedVoice &&
-    selectedVoice ===
-      getAzureVoice(
-        normalized,
-        gender,
-      )
-  ) {
-    return selectedVoice;
-  }
+  currentUtterance = null;
 
-  return expected;
+  updateState({
+    isPlaying: false,
+    isPaused: false,
+  });
 }
 
-// ============================================================
-// DEFAULT EXPORT
-// ============================================================
+export async function downloadSpeechAudio(
+  _text: string,
+  _language?: string,
+  _filename?: string,
+): Promise<void> {
+  // Device/browser SpeechSynthesis produces live audio and
+  // does not expose an MP3/WAV file for download.
+  //
+  // The function remains here so the existing controller
+  // does not break.
+  return;
+}
+
+export function initializeSpeechVoices(): void {
+  if (
+    typeof window === 'undefined' ||
+    !('speechSynthesis' in window)
+  ) {
+    return;
+  }
+
+  try {
+    window.speechSynthesis.getVoices();
+
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      emitVoices,
+    );
+  } catch {
+    // Ignore.
+  }
+}
+
+initializeSpeechVoices();
 
 export default {
   LANGUAGES,
+  SUPPORTED_LANGUAGES,
   GENDER_VOICES,
   DEFAULT_VOICE_SETTINGS,
-  AZURE_AFRIKAANS_VOICES,
-  AZURE_VOICES,
 
   normalizeLanguage,
-  getAzureLocale,
-  getAzureVoice,
-  getVoiceForLanguage,
-
+  getSpeechLanguage,
+  getLocaleForLanguage,
   isAfrikaans,
+
   getAfrikaansVoice,
+  getVoiceForLanguage,
+  getSelectedVoice,
+
+  getAvailableSystemVoices,
+  findAfrikaansBrowserVoice,
+  getSupportedVoiceNames,
+
+  getSpeechState,
+  subscribeSpeechState,
+  subscribeVoicesList,
+
+  loadVoiceSettings,
+  validateLanguageCode,
+  validateVoiceSelection,
 
   synthesizeSpeech,
   speak,
   speakAfrikaans,
-  stopSpeech,
 
-  getSupportedVoiceNames,
-  validateVoiceSelection,
+  stopSpeech,
+  togglePauseSpeech,
+  restartSpeech,
+
+  setSpeechRate,
+  setSpeechVolume,
+  setSpeechPitch,
+  setVoiceGender,
+  setSelectedVoiceURI,
+  applyVoicePreset,
+
+  downloadSpeechAudio,
 };
