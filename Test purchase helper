@@ -1,0 +1,11 @@
+fun purchaseMonthly(iap: AmazonIapManager) {
+    iap.buy(AmazonBillingService.MONTHLY)
+}
+
+fun purchaseYearly(iap: AmazonIapManager) {
+    iap.buy(AmazonBillingService.YEARLY)
+}
+
+fun purchaseCoins(iap: AmazonIapManager) {
+    iap.buy(AmazonBillingService.COINS)
+}
