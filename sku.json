@@ -1,0 +1,20 @@
+{
+  "com.studyhub.premium.monthly": {
+    "itemType": "SUBSCRIPTION",
+    "price": "$4.99",
+    "title": "Study Hub Premium Monthly",
+    "description": "Monthly premium subscription"
+  },
+  "com.studyhub.premium.yearly": {
+    "itemType": "SUBSCRIPTION",
+    "price": "$39.99",
+    "title": "Study Hub Premium Yearly",
+    "description": "Yearly premium subscription"
+  },
+  "com.studyhub.coins100": {
+    "itemType": "CONSUMABLE",
+    "price": "$0.99",
+    "title": "100 Study Coins",
+    "description": "Consumable coin pack"
+  }
+}
