@@ -1,0 +1,14 @@
+[
+  {
+    "sku": "com.studyhub.premium.monthly",
+    "type": "SUBSCRIPTION"
+  },
+  {
+    "sku": "com.studyhub.premium.yearly",
+    "type": "SUBSCRIPTION"
+  },
+  {
+    "sku": "com.studyhub.coins100",
+    "type": "CONSUMABLE"
+  }
+]
