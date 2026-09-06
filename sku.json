@@ -1,20 +1,11 @@
 {
-  "com.studyhub.premium.monthly": {
+  "studyhub_monthly_term": {
     "itemType": "SUBSCRIPTION",
     "price": "$4.99",
-    "title": "Study Hub Premium Monthly",
-    "description": "Monthly premium subscription"
-  },
-  "com.studyhub.premium.yearly": {
-    "itemType": "SUBSCRIPTION",
-    "price": "$39.99",
-    "title": "Study Hub Premium Yearly",
-    "description": "Yearly premium subscription"
-  },
-  "com.studyhub.coins100": {
-    "itemType": "CONSUMABLE",
-    "price": "$0.99",
-    "title": "100 Study Coins",
-    "description": "Consumable coin pack"
+    "title": "The Study Hub Pro Monthly",
+    "description": "Monthly Pro subscription for The Study Hub with a 7-day free trial. Cancel anytime.",
+    "subscriptionParent": "studyhub_monthly_sub",
+    "term": "Monthly",
+    "freeTrialPeriod": "Weekly"
   }
 }
