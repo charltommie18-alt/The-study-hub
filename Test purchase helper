@@ -1,11 +1,15 @@
-fun purchaseMonthly(iap: AmazonIapManager) {
-    iap.buy(AmazonBillingService.MONTHLY)
-}
+package com.studyhub.iap
 
-fun purchaseYearly(iap: AmazonIapManager) {
-    iap.buy(AmazonBillingService.YEARLY)
-}
+/**
+ * The Study Hub – Simple purchase helpers for testing
+ */
+object TestPurchaseHelper {
 
-fun purchaseCoins(iap: AmazonIapManager) {
-    iap.buy(AmazonBillingService.COINS)
+    fun purchaseMonthly(iap: AmazonIapManager) {
+        iap.buyMonthly()
+    }
+
+    fun refreshPurchases(iap: AmazonIapManager) {
+        iap.getPurchaseUpdates()
+    }
 }
