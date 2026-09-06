@@ -1,13 +1,14 @@
 {
-  "app": "StudyHub",
+  "appName": "The Study Hub",
   "subscription": {
     "parentSku": "studyhub_monthly_sub",
     "termSku": "studyhub_monthly_term",
-    "title": "StudyHub Pro Monthly",
-    "description": "StudyHub Pro monthly subscription with a 7-day free trial.",
+    "title": "The Study Hub Pro Monthly",
+    "description": "Monthly Pro subscription for The Study Hub with a 7-day free trial. Cancel anytime.",
     "term": "Monthly",
     "priceUsd": 4.99,
     "freeTrialDays": 7,
-    "autoRenew": true
+    "autoRenew": true,
+    "currency": "USD"
   }
 }
