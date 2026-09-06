@@ -1,7 +1,10 @@
 /**
- * Amazon Appstore Public Authentication Key / DRM Key
+ * Amazon Appstore Public Authentication Key
+ * Standalone. Keep this out of the main app bundle if possible.
  *
- * Standalone configuration. Kept separate from the main app.
+ * Replace the value below with the public key from your
+ * Amazon Developer Console → your app → Appstore Authentication Key
+ * if it differs from the one currently in the repo.
  */
 
 export const AMAZON_APPSTORE_PUBLIC_KEY_RAW =
