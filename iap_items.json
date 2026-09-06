@@ -1,14 +1,11 @@
 [
   {
-    "sku": "com.studyhub.premium.monthly",
-    "type": "SUBSCRIPTION"
-  },
-  {
-    "sku": "com.studyhub.premium.yearly",
-    "type": "SUBSCRIPTION"
-  },
-  {
-    "sku": "com.studyhub.coins100",
-    "type": "CONSUMABLE"
+    "sku": "studyhub_monthly_term",
+    "type": "SUBSCRIPTION",
+    "parentSku": "studyhub_monthly_sub",
+    "title": "The Study Hub Pro Monthly",
+    "price": "4.99",
+    "currency": "USD",
+    "freeTrialDays": 7
   }
 ]
