@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+# Amazon Appstore SDK (download separately)
+libs/*.jar
+amazon-appstore-sdk*.jar
+amazon-appstore-sdk*.zip
