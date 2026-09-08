@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.studyhub">
+    package="com.studyhub.app">
 
-    <!-- Required for Amazon In-App Purchasing notifications -->
     <uses-permission android:name="com.amazon.inapp.purchasing.Permission.NOTIFY" />
-
-    <!-- Internet for hosted web content / receipt verification -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -26,7 +23,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Amazon IAP Response Receiver (required) -->
         <receiver
             android:name="com.amazon.device.iap.ResponseReceiver"
             android:exported="true"
