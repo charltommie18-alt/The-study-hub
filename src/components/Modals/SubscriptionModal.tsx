@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Sparkles, 
-  CheckCircle2, 
-  ShieldCheck, 
-  CreditCard, 
-  Tablet, 
-  Tv, 
-  Flame, 
-  Clock, 
-  Layers, 
-  Mic, 
-  Zap, 
-  Calendar 
+import {
+  X,
+  Sparkles,
+  CheckCircle2,
+  ShieldCheck,
+  CreditCard,
+  Tablet,
+  Tv,
+  Flame,
+  Clock,
+  Layers,
+  Mic,
+  Zap,
+  Calendar,
+  AlertTriangle,
+  FileText,
+  Ban,
 } from 'lucide-react';
 import { SubscriptionState } from '../../types';
 
@@ -21,6 +24,7 @@ interface SubscriptionModalProps {
   onClose: () => void;
   subscription: SubscriptionState;
   onUpdateSubscription: (newSub: SubscriptionState) => void;
+  onOpenPolicy?: (tab: 'privacy' | 'terms' | 'data') => void;
 }
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
@@ -28,10 +32,12 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onClose,
   subscription,
   onUpdateSubscription,
+  onOpenPolicy,
 }) => {
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZAR' | 'EUR' | 'GBP' | 'JMD'>('USD');
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   if (!isOpen) return null;
 
@@ -46,6 +52,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const handleStartTrial = () => {
     setIsProcessing(true);
     setSuccessMessage('');
+    setShowCancelConfirm(false);
 
     setTimeout(() => {
       const now = new Date();
@@ -64,7 +71,9 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
       onUpdateSubscription(updated);
       setIsProcessing(false);
-      setSuccessMessage('🎉 7-Day Free Trial Activated! Enjoy full access to AI Flashcards, Spaced Repetition, Voice Input, and Fire OS Sync.');
+      setSuccessMessage(
+        '7-Day Free Trial activated. Full Pro access until the trial ends. Cancel anytime before day 7 to avoid being charged.'
+      );
     }, 800);
   };
 
@@ -73,50 +82,38 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       ...subscription,
       status: 'free',
       autoRenew: false,
+      planName: 'Free Tier',
     };
     onUpdateSubscription(updated);
-    setSuccessMessage('Subscription returned to Free Tier.');
+    setShowCancelConfirm(false);
+    setSuccessMessage(
+      'Subscription cancelled. You are back on Free Tier. No further charges will be made for this plan in the app.'
+    );
   };
 
   const isTrialActive = subscription.status === 'trial';
   const isProActive = subscription.status === 'active';
+  const hasPaidPlan = isTrialActive || isProActive;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#2D362E]/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div 
-        className="bg-white dark:bg-[#161C18] border border-[#D9D1C7] dark:border-[#2C3B2E] rounded-[28px] max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8 text-[#3C3C3B] dark:text-[#F4F1EA] focus:outline-none focus:ring-2 focus:ring-amber-400"
-        tabIndex={0}
-      >
-        
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#EBE7DF] dark:border-[#2C3B2E] pb-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-teal-600 to-emerald-600 flex items-center justify-center text-white shadow-md">
-              <Sparkles className="w-5 h-5 text-amber-200" />
-            </div>
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700 rounded-full text-amber-900 dark:text-amber-200 text-[10px] font-bold">
-                <Flame className="w-3 h-3 text-amber-600" />
-                <span>7-DAY FREE TRIAL INCLUDED</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#2D362E] dark:text-white tracking-tight mt-0.5">
-                StudyHub Pro Monthly Plan
-              </h2>
-            </div>
+    <div className="fixed inset-0 z-50 bg-[#2D362E]/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-[#F9F7F2] dark:bg-[#121613] w-full max-w-lg rounded-[28px] shadow-2xl border border-[#D9D1C7] dark:border-[#2B382D] overflow-hidden max-h-[92vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-[#EBE7DF] dark:border-[#2C3B2E]">
+          <div className="flex items-center gap-2">
+            <Flame className="w-5 h-5 text-orange-500" />
+            <h2 className="font-bold text-lg text-[#2D362E] dark:text-white">The Study Hub Pro</h2>
           </div>
-
           <button
             onClick={onClose}
-            className="text-[#8C857A] hover:text-[#2D362E] dark:hover:text-white p-1 rounded-full hover:bg-[#F2EFE9] dark:hover:bg-[#202B22] transition-colors cursor-pointer"
+            className="p-2 rounded-xl hover:bg-[#EBE7DF] dark:hover:bg-[#1C241E] transition-colors cursor-pointer"
+            aria-label="Close"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 text-[#736B5E] dark:text-[#A6C4A7]" />
           </button>
         </div>
 
-        {/* Currency Selector */}
-        <div className="flex items-center justify-between bg-[#F9F7F2] dark:bg-[#1C241E] border border-[#EBE7DF] dark:border-[#2A372C] rounded-2xl p-3 mb-6">
-          <span className="text-xs font-bold text-[#7A746B] dark:text-[#A6C4A7]">Select Billing Currency:</span>
-          <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="p-5">
+          <div className="flex flex-wrap gap-1.5 mb-4">
             {(['USD', 'ZAR', 'EUR', 'GBP', 'JMD'] as const).map((curr) => (
               <button
                 key={curr}
@@ -131,126 +128,174 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Plan Pricing Card */}
-        <div className="bg-gradient-to-br from-blue-900 via-teal-900 to-emerald-950 text-white border border-blue-500/40 rounded-[24px] p-6 shadow-lg mb-6 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-emerald-300 font-bold">Pro Monthly Subscription</span>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl sm:text-4xl font-serif font-bold text-white">
-                  {prices[selectedCurrency].symbol}0.00
-                </span>
-                <span className="text-emerald-200 text-xs font-semibold">for first 7 days</span>
-              </div>
-              <p className="text-blue-100 text-xs mt-1">
-                Then {prices[selectedCurrency].label}. Cancel anytime before day 7 with zero charge.
-              </p>
-            </div>
-
-            <div className="text-right sm:text-right shrink-0">
-              <span className="inline-block px-3 py-1 bg-amber-400 text-amber-950 text-xs font-extrabold rounded-full shadow-sm">
-                NO CREDIT CARD REQUIRED TODAY
+          <div className="bg-gradient-to-br from-blue-900 via-teal-900 to-emerald-950 text-white border border-blue-500/40 rounded-[24px] p-6 shadow-lg mb-4">
+            <span className="text-xs uppercase tracking-widest text-emerald-300 font-bold">
+              Pro Monthly Subscription
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl font-serif font-bold">
+                {prices[selectedCurrency].symbol}0.00
               </span>
+              <span className="text-emerald-200 text-xs font-semibold">for first 7 days</span>
             </div>
+            <p className="text-blue-100 text-xs mt-1">
+              Then {prices[selectedCurrency].label}. Cancel anytime before day 7 with zero charge.
+            </p>
           </div>
-        </div>
 
-        {/* Feature Highlights */}
-        <div className="space-y-3 mb-6">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#7A746B] dark:text-[#A6C4A7]">
-            Included in Your 7-Day Free Trial:
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-            <div className="flex items-center gap-2 p-2.5 bg-[#F9F7F2] dark:bg-[#1C241E] rounded-xl border border-[#EBE7DF] dark:border-[#2A372C]">
-              <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="font-semibold text-[#2D362E] dark:text-white">SM-2 Spaced Repetition Decks</span>
-            </div>
-
-            <div className="flex items-center gap-2 p-2.5 bg-[#F9F7F2] dark:bg-[#1C241E] rounded-xl border border-[#EBE7DF] dark:border-[#2A372C]">
-              <Mic className="w-4 h-4 text-blue-600 dark:text-cyan-400 shrink-0" />
-              <span className="font-semibold text-[#2D362E] dark:text-white">Voice Active Recall & Dictation</span>
-            </div>
-
-            <div className="flex items-center gap-2 p-2.5 bg-[#F9F7F2] dark:bg-[#1C241E] rounded-xl border border-[#EBE7DF] dark:border-[#2A372C]">
-              <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-              <span className="font-semibold text-[#2D362E] dark:text-white">Gemini 3.5 High-Speed AI</span>
-            </div>
-
-            <div className="flex items-center gap-2 p-2.5 bg-[#F9F7F2] dark:bg-[#1C241E] rounded-xl border border-[#EBE7DF] dark:border-[#2A372C]">
-              <Tv className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-              <span className="font-semibold text-[#2D362E] dark:text-white">Amazon Fire TV & Tablet Compatible</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Fire OS & App Store Compatibility Note */}
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200 mb-6">
-          <Tablet className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-          <p className="leading-tight">
-            <strong>Fire Device Compatibility:</strong> Compatible with Amazon Fire Tablets, Fire TV OS, and Google Play Services. D-Pad remote navigation enabled.
-          </p>
-        </div>
-
-        {/* Success Message Banner */}
-        {successMessage && (
-          <div className="p-3.5 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 rounded-2xl text-xs font-medium flex items-center gap-2 mb-6">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>{successMessage}</span>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="space-y-3 border-t border-[#EBE7DF] dark:border-[#2C3B2E] pt-4">
-          {isTrialActive || isProActive ? (
-            <div className="space-y-2">
-              <div className="p-3 bg-blue-50 dark:bg-cyan-950/40 border border-blue-200 dark:border-cyan-800 rounded-2xl text-xs text-blue-900 dark:text-cyan-200 flex items-center justify-between font-semibold">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
-                  <span>
-                    {isTrialActive ? 'Free Trial Active' : 'Pro Subscription Active'}
-                  </span>
-                </div>
-                <span>
-                  {subscription.trialEndDate ? `Ends ${new Date(subscription.trialEndDate).toLocaleDateString()}` : 'Active'}
-                </span>
-              </div>
-
-              <button
-                onClick={handleCancelSubscription}
-                className="w-full py-2.5 bg-[#F2EFE9] dark:bg-[#202B22] hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-[#D9D1C7] dark:border-[#2F3E31] rounded-2xl text-xs font-bold transition-all cursor-pointer"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 text-xs">
+            {[
+              { icon: Layers, text: 'Unlimited AI flashcards & quizzes' },
+              { icon: Mic, text: 'Voice input & narration' },
+              { icon: Zap, text: 'Priority AI tutor responses' },
+              { icon: Clock, text: 'Advanced focus analytics' },
+              { icon: Tablet, text: 'Fire tablet optimised' },
+              { icon: Tv, text: 'Fire TV / D-Pad friendly' },
+            ].map(({ icon: Icon, text }) => (
+              <div
+                key={text}
+                className="flex items-center gap-2 p-2.5 bg-[#F9F7F2] dark:bg-[#1C241E] rounded-xl border border-[#EBE7DF] dark:border-[#2A372C]"
               >
-                Cancel Subscription Trial
-              </button>
+                <Icon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="font-semibold text-[#2D362E] dark:text-white">{text}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 bg-slate-50 dark:bg-[#1C241E] border border-[#EBE7DF] dark:border-[#2A372C] rounded-2xl text-[11px] text-[#3C3C3B] dark:text-[#E6E1D8] mb-4 space-y-1.5">
+            <p className="font-bold text-[#2D362E] dark:text-white flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5" />
+              Billing & cancellation policy
+            </p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li>7-day free trial; you will not be charged if you cancel during the trial.</li>
+              <li>After the trial, the plan renews monthly at the price shown above.</li>
+              <li>Cancel anytime in this screen — access continues until the current period ends where applicable.</li>
+              <li>
+                On Amazon Appstore devices, you can also manage or cancel in{' '}
+                <strong>Amazon Account → Memberships & Subscriptions</strong>.
+              </li>
+            </ul>
+          </div>
+
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200 mb-4">
+            <Tablet className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="leading-tight">
+              <strong>Fire Device Compatibility:</strong> Works on Amazon Fire Tablets and Fire TV OS.
+              Package ID: <span className="font-mono">com.studyhub.app</span>
+            </p>
+          </div>
+
+          {successMessage && (
+            <div className="p-3.5 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 rounded-2xl text-xs font-medium flex items-center gap-2 mb-4">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>{successMessage}</span>
             </div>
-          ) : (
-            <button
-              onClick={handleStartTrial}
-              disabled={isProcessing}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-teal-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Activating Your 7-Day Free Trial...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>Start 7-Day Free Trial ($0 Today)</span>
-                </>
-              )}
-            </button>
           )}
 
-          <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C857A] dark:text-[#A6C4A7] font-medium pt-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Encrypted Local Billing • Cancel Anytime with 1 Click</span>
+          <div className="space-y-3 border-t border-[#EBE7DF] dark:border-[#2C3B2E] pt-4">
+            {hasPaidPlan ? (
+              <div className="space-y-2">
+                <div className="p-3 bg-blue-50 dark:bg-cyan-950/40 border border-blue-200 dark:border-cyan-800 rounded-2xl text-xs text-blue-900 dark:text-cyan-200 flex items-center justify-between font-semibold">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+                    <span>{isTrialActive ? 'Free Trial Active' : 'Pro Subscription Active'}</span>
+                  </div>
+                  <span>
+                    {subscription.trialEndDate
+                      ? `Ends ${new Date(subscription.trialEndDate).toLocaleDateString()}`
+                      : 'Active'}
+                  </span>
+                </div>
+
+                {!showCancelConfirm ? (
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="w-full py-2.5 bg-[#F2EFE9] dark:bg-[#202B22] hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-[#D9D1C7] dark:border-[#2F3E31] rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    Cancel subscription
+                  </button>
+                ) : (
+                  <div className="p-3 border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 rounded-2xl space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-rose-900 dark:text-rose-200">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <p>
+                        Cancel your Pro plan and return to Free Tier? Auto-renew will be turned off.
+                        On Amazon devices, also cancel in Amazon Account if you purchased through the Appstore.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCancelSubscription}
+                        className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        Yes, cancel
+                      </button>
+                      <button
+                        onClick={() => setShowCancelConfirm(false)}
+                        className="flex-1 py-2.5 bg-white dark:bg-[#121613] border border-[#D9D1C7] dark:border-[#2F3E31] rounded-xl text-xs font-bold cursor-pointer text-[#2D362E] dark:text-white"
+                      >
+                        Keep plan
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={handleStartTrial}
+                disabled={isProcessing}
+                className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-teal-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Activating Your 7-Day Free Trial...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-200" />
+                    <span>Start 7-Day Free Trial ($0 Today)</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C857A] dark:text-[#A6C4A7] font-medium pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Cancel anytime · No charge during free trial</span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] text-[#6B6560] dark:text-[#A6C4A7] pt-1">
+              <button
+                type="button"
+                onClick={() => onOpenPolicy?.('privacy')}
+                className="underline hover:text-blue-600 cursor-pointer flex items-center gap-1"
+              >
+                <FileText className="w-3 h-3" />
+                Privacy Policy
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => onOpenPolicy?.('terms')}
+                className="underline hover:text-blue-600 cursor-pointer"
+              >
+                Terms of Service
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => onOpenPolicy?.('data')}
+                className="underline hover:text-blue-600 cursor-pointer"
+              >
+                Student Data & Billing
+              </button>
+            </div>
           </div>
         </div>
-
       </div>
     </div>
   );
