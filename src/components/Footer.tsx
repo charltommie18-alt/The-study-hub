@@ -231,7 +231,7 @@ export const Footer: React.FC<FooterProps> = ({
                   </li>
                   <li className="flex items-center gap-2">
                     <Smartphone className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Amazon Appstore (`com.amazon.studyhub`)</span>
+                    <spanAmazon Appstore (`com.studyhub.app`)></span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400 shrink-0" />
