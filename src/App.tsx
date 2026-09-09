@@ -45,6 +45,7 @@ import { SettingsModal } from './components/Modals/SettingsModal';
 import { SubscriptionModal } from './components/Modals/SubscriptionModal';
 import { InstallAppModal } from './components/Modals/InstallAppModal';
 import { ShortcutsModal } from './components/Modals/ShortcutsModal';
+import { PolicyModal } from './components/Modals/PolicyModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('notes');
