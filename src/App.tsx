@@ -98,7 +98,9 @@ export default function App() {
   const [isAddPlanOpen, setIsAddPlanOpen] = useState<boolean>(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState<boolean>(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
-
+const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | 'data'>('privacy');
+  
   // Register online/offline status listeners
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
