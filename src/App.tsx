@@ -16,7 +16,6 @@ import { PushNotificationSettings } from './types';
 import { calculateSpacedRepetition, RepetitionRating } from './utils/spacedRepetition';
 import { LoginModal } from './components/Modals/LoginModal';
 import { loadUser, logoutUser, subscriptionForUser, daysLeftInTrial, type UserAccount } from './utils/auth';
-import { loadFromStorage, saveToStorage } from './utils/storage';
 
 import { Navbar } from './components/Navbar';
 import { HomeScreenInstallBanner } from './components/HomeScreenInstallBanner';
@@ -58,13 +57,10 @@ export default function App() {
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState<boolean>(false);
   const [isInstallOpen, setIsInstallOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
-  
-  // On login / app open: trial starts for normal users; admin always free
-  useEffect(() => {
-    if (!user) return;
-    setSubscription((prev) => subscriptionForUser(user.email, prev));
-  }, [user?.email]);
-  
+  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | 'data'>('privacy');
+  const [user, setUser] = useState<UserAccount | null>(() => loadUser());
+
   // Subscription state (7-day free trial + monthly plan + Fire OS compatibility)
   const [subscription, setSubscription] = useState<SubscriptionState>(() =>
     loadFromStorage('studyhub_subscription', {
@@ -76,6 +72,12 @@ export default function App() {
       autoRenew: false,
     })
   );
+
+  // On login / app open: trial starts for normal users; admin always free
+  useEffect(() => {
+    if (!user) return;
+    setSubscription((prev) => subscriptionForUser(user.email, prev));
+  }, [user?.email]);
   
   // Storage state initialization
   const [currentGrade, setCurrentGrade] = useState<GradeLevel>(() => loadFromStorage('cape_grade_level', 'grade-12'));
@@ -95,7 +97,6 @@ export default function App() {
 
   const [achievements, setAchievements] = useState(() => loadFromStorage('cape_achievements', INITIAL_ACHIEVEMENTS));
   const [gamification, setGamification] = useState(() => loadFromStorage('cape_gamification', INITIAL_GAMIFICATION));
-  const [user, setUser] = useState<UserAccount | null>(() => loadUser());
   
   const [notificationSettings, setNotificationSettings] = useState<PushNotificationSettings>(() =>
     loadFromStorage('cape_push_settings', DEFAULT_NOTIFICATION_SETTINGS)
@@ -108,20 +109,19 @@ export default function App() {
   const [isAddPlanOpen, setIsAddPlanOpen] = useState<boolean>(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState<boolean>(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
-const [isPolicyOpen, setIsPolicyOpen] = useState(false);
-const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | 'data'>('privacy');
-    const handleLoggedIn = (u: UserAccount) => {
-      
+
+  const handleLoggedIn = (u: UserAccount) => {
     setUser(u);
     setSubscription(subscriptionForUser(u.email, subscription));
   };
-  
+
   const trialDays = daysLeftInTrial(subscription);
-  
+
   const handleLogout = () => {
     logoutUser();
     setUser(null);
   };
+
   
   // Register online/offline status listeners
   useEffect(() => {
@@ -223,15 +223,7 @@ const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | '
         }));
       }
     }, 20000); // Check every 20s
-    
-  if (!user) {
-    return (
-      <div className={isDarkMode ? 'dark' : ''}>
-        <LoginModal isOpen={true} onLoggedIn={handleLoggedIn} />
-      </div>
-    );
-  }
-    
+
     return () => clearInterval(checkInterval);
   }, [notificationSettings]);
 
@@ -349,6 +341,15 @@ const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | '
   const handleLogFocusSession = (minutes: number) => {
     setTotalFocusMinutes((prev) => prev + minutes);
   };
+
+  // Require email login before using the app
+  if (!user) {
+    return (
+      <div className={isDarkMode ? 'dark' : ''}>
+        <LoginModal isOpen={true} onLoggedIn={handleLoggedIn} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-200">
@@ -587,6 +588,16 @@ const [policyDefaultTab, setPolicyDefaultTab] = useState<'privacy' | 'terms' | '
         onClose={() => setIsSubscriptionOpen(false)}
         subscription={subscription}
         onUpdateSubscription={(newSub) => setSubscription(newSub)}
+        onOpenPolicy={(tab) => {
+          setPolicyDefaultTab(tab);
+          setIsPolicyOpen(true);
+        }}
+      />
+
+      <PolicyModal
+        isOpen={isPolicyOpen}
+        onClose={() => setIsPolicyOpen(false)}
+        defaultTab={policyDefaultTab}
       />
 
       <InstallAppModal
