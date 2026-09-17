@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'achievements', label: 'Achievements & XP', icon: Trophy },
     { id: 'studyroom', label: 'Peer Study Rooms', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'admin', label: 'Admin (12021)', icon: Shield },
+    { id: 'admin', label: 'Admin Portal', icon: Shield },
   ];
 
   return (
