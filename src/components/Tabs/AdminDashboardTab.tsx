@@ -30,17 +30,29 @@ interface AdminDashboardTabProps {
 }
 
 export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStoreModal }) => {
-  // PIN lock state (Persisted in localStorage, defaults to 12021)
-  const [adminPin, setAdminPin] = useState<string>(() => {
+  // PIN lock state — stored only in localStorage (never hardcoded in source)
+  const [adminPin, setAdminPin] = useState<string | null>(() => {
     try {
-      return localStorage.getItem('studyhub_admin_pin') || '12021';
+      return localStorage.getItem('studyhub_admin_pin');
     } catch {
-      return '12021';
+      return null;
     }
   });
   const [pinInput, setPinInput] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinError, setPinError] = useState(false);
+
+  // First-time setup (when no PIN has been set on this device)
+  const [isSetupMode, setIsSetupMode] = useState(() => {
+    try {
+      return !localStorage.getItem('studyhub_admin_pin');
+    } catch {
+      return true;
+    }
+  });
+  const [setupPin, setSetupPin] = useState('');
+  const [setupConfirm, setSetupConfirm] = useState('');
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   // Security - Change PIN Modal
   const [showChangePinModal, setShowChangePinModal] = useState(false);
@@ -67,6 +79,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminPin) return;
     if (pinInput.trim() === adminPin) {
       setIsAuthenticated(true);
       setPinError(false);
@@ -74,6 +87,27 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
       setPinError(true);
       setPinInput('');
     }
+  };
+
+  const handleFirstTimeSetup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (setupPin.length !== 5 || !/^\d{5}$/.test(setupPin)) {
+      setSetupError('PIN must be exactly 5 digits.');
+      return;
+    }
+    if (setupPin !== setupConfirm) {
+      setSetupError('PINs do not match.');
+      return;
+    }
+    try {
+      localStorage.setItem('studyhub_admin_pin', setupPin);
+    } catch {}
+    setAdminPin(setupPin);
+    setIsSetupMode(false);
+    setIsAuthenticated(true);
+    setSetupPin('');
+    setSetupConfirm('');
+    setSetupError(null);
   };
 
   const handleChangePin = (e: React.FormEvent) => {
@@ -176,6 +210,69 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
   });
 
   if (!isAuthenticated) {
+    // ========== FIRST-TIME SETUP (no PIN stored yet) ==========
+    if (isSetupMode || !adminPin) {
+      return (
+        <div className="max-w-md mx-auto my-12 p-8 bg-[#FBF9F5] border border-[#E3DDD3] rounded-3xl shadow-md text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-[#E2EFE3] text-[#5A6D5B] flex items-center justify-center mx-auto border border-[#C5DCC6]">
+            <KeyRound className="w-8 h-8" />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-[#2D362E]">Set Admin PIN</h2>
+            <p className="text-xs text-[#736B5E] mt-1">
+              Create a private 5-digit PIN to protect the Admin Control Portal. This PIN is stored only on this device and never appears in the source code.
+            </p>
+          </div>
+
+          <form onSubmit={handleFirstTimeSetup} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-bold text-[#575047] mb-1">New 5-Digit PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={5}
+                value={setupPin}
+                onChange={(e) => setSetupPin(e.target.value.replace(/\D/g, ''))}
+                placeholder="•••••"
+                className="w-full px-3.5 py-2.5 bg-white border border-[#D9D1C7] focus:border-[#5A6D5B] rounded-xl text-center text-lg tracking-widest font-mono font-bold text-[#2D362E] outline-hidden"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#575047] mb-1">Confirm PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={5}
+                value={setupConfirm}
+                onChange={(e) => setSetupConfirm(e.target.value.replace(/\D/g, ''))}
+                placeholder="•••••"
+                className="w-full px-3.5 py-2.5 bg-white border border-[#D9D1C7] focus:border-[#5A6D5B] rounded-xl text-center text-lg tracking-widest font-mono font-bold text-[#2D362E] outline-hidden"
+              />
+            </div>
+
+            {setupError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center justify-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{setupError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={setupPin.length !== 5 || setupConfirm.length !== 5}
+              className="w-full py-3 bg-[#5A6D5B] hover:bg-[#4A5D4B] disabled:opacity-50 text-white font-semibold text-xs rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>Create Admin PIN & Continue</span>
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    // ========== NORMAL UNLOCK ==========
     return (
       <div className="max-w-md mx-auto my-12 p-8 bg-[#FBF9F5] border border-[#E3DDD3] rounded-3xl shadow-md text-center space-y-6">
         <div className="w-16 h-16 rounded-2xl bg-[#E2EFE3] text-[#5A6D5B] flex items-center justify-center mx-auto border border-[#C5DCC6]">
@@ -381,7 +478,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
                   </div>
                   <span className="text-[10px] text-[#575047] font-semibold">{day.date.slice(5)}</span>
                 </div>
-              );
+                );
             })}
           </div>
           <div className="flex items-center justify-between text-xs text-[#736B5E] pt-1">
@@ -460,43 +557,45 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
           </div>
         </div>
 
-        {/* Subscriber Roster Table */}
-        <div className="overflow-x-auto border border-[#E8E2D8] rounded-xl bg-white">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#F2EFE9] text-[#575047] font-bold border-b border-[#E8E2D8]">
+        {/* Subscriber Table */}
+        <div className="overflow-x-auto rounded-xl border border-[#D9D1C7]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#F2EFE9] text-[#575047] font-bold uppercase tracking-wider">
+              <tr>
                 <th className="p-3">Subscriber</th>
-                <th className="p-3">Grade Target</th>
-                <th className="p-3">Plan Tier</th>
-                <th className="p-3">Monthly Billing</th>
-                <th className="p-3">Docs Processed</th>
+                <th className="p-3">Grade</th>
+                <th className="p-3">Tier</th>
+                <th className="p-3">Billing</th>
+                <th className="p-3">Activity</th>
                 <th className="p-3">Status</th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E8E2D8]">
+            <tbody className="divide-y divide-[#E8E2D8] bg-white">
               {filteredSubscribers.map((sub) => (
-                <tr key={sub.id} className="hover:bg-[#FDFBF7] transition-colors">
-                  <td className="p-3 font-semibold text-[#2D362E]">
-                    <div>{sub.fullName}</div>
-                    <div className="text-[11px] text-[#736B5E] font-normal">{sub.email}</div>
+                <tr key={sub.id} className="hover:bg-[#FBF9F5] transition-colors">
+                  <td className="p-3">
+                    <div className="font-semibold text-[#2D362E]">{sub.fullName}</div>
+                    <div className="text-[11px] text-[#736B5E]">{sub.email}</div>
                   </td>
-                  <td className="p-3 uppercase font-medium text-[#575047]">
-                    {sub.gradeLevel}
+                  <td className="p-3 text-[#575047]">
+                    {GRADE_CONFIGS[sub.gradeLevel]?.label || sub.gradeLevel}
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      sub.tier === 'Pro'
-                        ? 'bg-[#E2EFE3] text-[#2D362E] border border-[#C5DCC6]'
-                        : sub.tier === 'Institutional'
-                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        sub.tier === 'Pro'
+                          ? 'bg-[#E2EFE3] text-[#5A6D5B]'
+                          : sub.tier === 'Institutional'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-[#F2EFE9] text-[#736B5E]'
+                      }`}
+                    >
                       {sub.tier}
                     </span>
                   </td>
-                  <td className="p-3 font-mono font-bold text-[#2D362E]">
-                    {sub.currency} {sub.amount.toFixed(2)} / mo
+                  <td className="p-3 text-[#575047]">
+                    {sub.currency} {sub.amount.toFixed(2)}
                   </td>
                   <td className="p-3 text-[#575047]">
                     {sub.docsUploaded} documents
@@ -549,38 +648,37 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
                   value={newSubName}
                   onChange={(e) => setNewSubName(e.target.value)}
                   placeholder="e.g. Amara Okafor"
-                  className="w-full px-3 py-2 bg-white border border-[#D9D1C7] rounded-xl text-xs text-[#2D362E] focus:outline-none focus:border-[#5A6D5B]"
+                  className="w-full px-3 py-2 bg-white border border-[#D9D1C7] rounded-xl text-xs text-[#2D362E]"
                 />
               </div>
-
               <div>
-                <label className="block font-bold text-[#575047] mb-1">Email Address</label>
+                <label className="block font-bold text-[#575047] mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={newSubEmail}
                   onChange={(e) => setNewSubEmail(e.target.value)}
-                  placeholder="amara@school.edu"
-                  className="w-full px-3 py-2 bg-white border border-[#D9D1C7] rounded-xl text-xs text-[#2D362E] focus:outline-none focus:border-[#5A6D5B]"
+                  placeholder="student@example.com"
+                  className="w-full px-3 py-2 bg-white border border-[#D9D1C7] rounded-xl text-xs text-[#2D362E]"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-[#575047] mb-1">Grade Target</label>
+                  <label className="block font-bold text-[#575047] mb-1">Grade</label>
                   <select
                     value={newSubGrade}
                     onChange={(e) => setNewSubGrade(e.target.value as GradeLevel)}
                     className="w-full px-3 py-2 bg-white border border-[#D9D1C7] rounded-xl text-xs text-[#2D362E]"
                   >
-                    {GRADE_CONFIGS.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
+                    {Object.entries(GRADE_CONFIGS).map(([key, cfg]) => (
+                      <option key={key} value={key}>
+                        {cfg.label}
+                      </option>
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block font-bold text-[#575047] mb-1">Plan Tier</label>
+                  <label className="block font-bold text-[#575047] mb-1">Tier</label>
                   <select
                     value={newSubTier}
                     onChange={(e) => setNewSubTier(e.target.value as any)}
@@ -592,7 +690,6 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
                   </select>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[#575047] mb-1">Currency</label>
@@ -606,7 +703,6 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block font-bold text-[#575047] mb-1">Monthly Fee</label>
                   <input
@@ -654,10 +750,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
             <form onSubmit={handleChangePin} className="space-y-4">
               {pinChangeMsg && (
                 <div
-                  className={`p-2.5 text-xs rounded-xl flex items-center gap-2 ${
+                  className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                     pinChangeMsg.type === 'success'
-                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                      : 'bg-rose-50 border border-rose-200 text-rose-800'
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                      : 'bg-rose-50 border border-rose-200 text-rose-700'
                   }`}
                 >
                   {pinChangeMsg.type === 'success' ? (
@@ -723,3 +819,4 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ onOpenStor
     </div>
   );
 };
+      
