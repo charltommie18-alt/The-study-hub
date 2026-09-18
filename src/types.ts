@@ -175,6 +175,14 @@ export interface SubscriberRecord {
   joinedDate: string;
   lastActiveDate: string;
   docsUploaded: number;
+  trialStartDate?: string;
+  trialEndDate?: string;
+  trialStatus: 'trial' | 'active' | 'expired';
+  paymentDueDate?: string;
+  paymentStatus: 'Paid Pro' | 'Active Trial ($0)' | 'Pending Payment (Trial Expired)' | 'Overdue';
+  paymentMethod?: string;
+  lastPaymentAmount?: number;
+  accessLevel: 'Basic (Trial)' | 'Full Pro Unlocked' | 'Access Suspended';
 }
 
 export interface DailyAnalyticsRecord {
@@ -235,7 +243,7 @@ export interface Flashcard {
 }
 
 export interface SubscriptionState {
-  status: 'free' | 'trial' | 'active';
+  status: 'trial' | 'active' | 'expired';
   trialStartDate?: string;
   trialEndDate?: string;
   planName: string;
@@ -243,6 +251,11 @@ export interface SubscriptionState {
   currency: CurrencyCode;
   isFireOSCompatible: boolean;
   autoRenew: boolean;
+  paymentMethod?: string;
+  lastPaymentDate?: string;
+  nextPaymentDue?: string;
+  amountPaid?: number;
+  transactionId?: string;
 }
 
 export interface QuizQuestion {

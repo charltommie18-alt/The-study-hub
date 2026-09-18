@@ -15,7 +15,9 @@ import { DEFAULT_NOTIFICATION_SETTINGS, sendBrowserNotification } from './utils/
 import { PushNotificationSettings } from './types';
 import { calculateSpacedRepetition, RepetitionRating } from './utils/spacedRepetition';
 import { LoginModal } from './components/Modals/LoginModal';
-import { loadUser, logoutUser, subscriptionForUser, daysLeftInTrial, type UserAccount } from './utils/auth';
+import { loadUser, logoutUser, subscriptionForUser, daysLeftInTrial, isFeatureAccessible, isAdminEmail, type UserAccount } from './utils/auth';
+import { ProFeatureGateCard } from './components/ProFeatureGateCard';
+import { TrialExpiredLockModal } from './components/Modals/TrialExpiredLockModal';
 
 import { Navbar } from './components/Navbar';
 import { HomeScreenInstallBanner } from './components/HomeScreenInstallBanner';
@@ -116,6 +118,8 @@ export default function App() {
   };
 
   const trialDays = daysLeftInTrial(subscription);
+  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email || '');
+  const canAccessCurrentTab = isFeatureAccessible(activeTab, subscription, isAdmin);
 
   const handleLogout = () => {
     logoutUser();
@@ -379,6 +383,7 @@ export default function App() {
         onOpenInstallModal={() => setIsInstallOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        subscription={subscription}
       />
 
       {/* Workspace Subject Pills Bar */}
@@ -391,148 +396,162 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-12">
-        {activeTab === 'notes' && (
-          <NotesSummarizerTab
-            notes={notes}
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            onAddNote={handleAddNote}
-            onDeleteNote={handleDeleteNote}
-            onConvertToFlashcards={handleConvertToFlashcards}
-            onConvertToQuiz={handleConvertToQuiz}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+        {!canAccessCurrentTab ? (
+          <ProFeatureGateCard
+            tab={activeTab}
+            onOpenPaymentModal={() => setIsSubscriptionOpen(true)}
+            onNavigateToBasicTab={(tab) => setActiveTab(tab)}
+            trialDaysRemaining={subscription.status === 'trial' ? daysLeftInTrial(subscription) : null}
           />
-        )}
+        ) : (
+          <>
+            {activeTab === 'notes' && (
+              <NotesSummarizerTab
+                notes={notes}
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                onAddNote={handleAddNote}
+                onDeleteNote={handleDeleteNote}
+                onConvertToFlashcards={handleConvertToFlashcards}
+                onConvertToQuiz={handleConvertToQuiz}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+              />
+            )}
 
-        {activeTab === 'upload' && (
-          <DocumentUploadTab
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            currentGrade={currentGrade}
-            onSelectGrade={(g) => setCurrentGrade(g)}
-            onAddNote={handleAddNote}
-            onAddFlashcards={handleAddFlashcards}
-            onNavigateTab={(tab) => setActiveTab(tab)}
-          />
-        )}
+            {activeTab === 'upload' && (
+              <DocumentUploadTab
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                currentGrade={currentGrade}
+                onSelectGrade={(g) => setCurrentGrade(g)}
+                onAddNote={handleAddNote}
+                onAddFlashcards={handleAddFlashcards}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-        {activeTab === 'mockexam' && (
-          <ExamModeTab
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            currentGrade={currentGrade}
-            onSelectSubject={(id) => setSelectedSubjectId(id)}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
-          />
-        )}
+            {activeTab === 'mockexam' && (
+              <ExamModeTab
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                currentGrade={currentGrade}
+                onSelectSubject={(id) => setSelectedSubjectId(id)}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+              />
+            )}
 
-        {activeTab === 'podcast' && (
-          <AudioPodcastTab
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            currentGrade={currentGrade}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
-          />
-        )}
+            {activeTab === 'podcast' && (
+              <AudioPodcastTab
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                currentGrade={currentGrade}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+              />
+            )}
 
-        {activeTab === 'canvas' && (
-          <VisualLabCanvasTab
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            currentGrade={currentGrade}
-          />
-        )}
+            {activeTab === 'canvas' && (
+              <VisualLabCanvasTab
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                currentGrade={currentGrade}
+              />
+            )}
 
-        {activeTab === 'flashcards' && (
-          <FlashcardsTab
-            flashcards={flashcards}
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            onAddFlashcards={handleAddFlashcards}
-            onUpdateFlashcardStatus={handleUpdateFlashcardStatus}
-            onUpdateFlashcardSpacedRepetition={handleUpdateFlashcardSpacedRepetition}
-            onDeleteFlashcard={handleDeleteFlashcard}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
-            onOpenSubscriptionModal={() => setIsSubscriptionOpen(true)}
-          />
-        )}
+            {activeTab === 'flashcards' && (
+              <FlashcardsTab
+                flashcards={flashcards}
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                onAddFlashcards={handleAddFlashcards}
+                onUpdateFlashcardStatus={handleUpdateFlashcardStatus}
+                onUpdateFlashcardSpacedRepetition={handleUpdateFlashcardSpacedRepetition}
+                onDeleteFlashcard={handleDeleteFlashcard}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+                onOpenSubscriptionModal={() => setIsSubscriptionOpen(true)}
+              />
+            )}
 
-        {activeTab === 'quiz' && (
-          <QuizTab
-            quizQuestions={quizQuestions}
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            onAddQuizResult={handleAddQuizResult}
-            onUpdateSubjectScore={handleUpdateSubjectScore}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
-          />
-        )}
+            {activeTab === 'quiz' && (
+              <QuizTab
+                quizQuestions={quizQuestions}
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                onAddQuizResult={handleAddQuizResult}
+                onUpdateSubjectScore={handleUpdateSubjectScore}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+              />
+            )}
 
-        {activeTab === 'focus' && (
-          <FocusTimerTab
-            onLogFocusSession={handleLogFocusSession}
-            notificationSettings={notificationSettings}
-            onSendTestNotification={handleSendTestNotification}
-          />
-        )}
+            {activeTab === 'focus' && (
+              <FocusTimerTab
+                onLogFocusSession={handleLogFocusSession}
+                notificationSettings={notificationSettings}
+                onSendTestNotification={handleSendTestNotification}
+              />
+            )}
 
-        {activeTab === 'tutor' && (
-          <AITutorTab
-            messages={tutorMessages}
-            subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
-            onSelectSubject={(id) => setSelectedSubjectId(id)}
-            currentGrade={currentGrade}
-            onSelectGrade={(grade) => setCurrentGrade(grade)}
-            onSendMessage={handleSendMessage}
-            onClearMessages={() => {
-              setTutorMessages([]);
-              saveToStorage('cape_tutor_msg', []);
-            }}
-            onAddFlashcard={(newCard) => handleAddFlashcards([newCard])}
-            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
-            onOpenAddSubject={() => setIsAddSubjectOpen(true)}
-          />
-        )}
+            {activeTab === 'tutor' && (
+              <AITutorTab
+                messages={tutorMessages}
+                subjects={subjects}
+                selectedSubjectId={selectedSubjectId}
+                onSelectSubject={(id) => setSelectedSubjectId(id)}
+                currentGrade={currentGrade}
+                onSelectGrade={(grade) => setCurrentGrade(grade)}
+                onSendMessage={handleSendMessage}
+                onClearMessages={() => {
+                  setTutorMessages([]);
+                  saveToStorage('cape_tutor_msg', []);
+                }}
+                onAddFlashcard={(newCard) => handleAddFlashcards([newCard])}
+                onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+                onOpenAddSubject={() => setIsAddSubjectOpen(true)}
+              />
+            )}
 
-        {activeTab === 'achievements' && (
-          <AchievementsTab
-            achievements={achievements}
-            gamification={gamification}
-            onClaimXp={handleClaimXp}
-          />
-        )}
+            {activeTab === 'achievements' && (
+              <AchievementsTab
+                achievements={achievements}
+                gamification={gamification}
+                onClaimXp={handleClaimXp}
+              />
+            )}
 
-        {activeTab === 'studyroom' && (
-          <StudyRoomTab
-            currentGrade={currentGrade}
-            currentSubjectName={currentSubject?.name || 'General Study'}
-          />
-        )}
+            {activeTab === 'studyroom' && (
+              <StudyRoomTab
+                currentGrade={currentGrade}
+                currentSubjectName={currentSubject?.name || 'General Study'}
+              />
+            )}
 
-        {activeTab === 'planner' && (
-          <StudyPlannerTab
-            subjects={subjects}
-            currentSubjectName={currentSubject?.name || 'General Study'}
-          />
-        )}
+            {activeTab === 'planner' && (
+              <StudyPlannerTab
+                subjects={subjects}
+                currentSubjectName={currentSubject?.name || 'General Study'}
+              />
+            )}
 
-        {activeTab === 'analytics' && (
-          <AnalyticsTab
-            subjects={subjects}
-            quizResults={quizResults}
-            flashcards={flashcards}
-            totalFocusMinutes={totalFocusMinutes}
-            streakDays={streakDays}
-            notificationSettings={notificationSettings}
-            onUpdateNotificationSettings={(s) => setNotificationSettings(s)}
-            onSendTestNotification={handleSendTestNotification}
-            onStartPomodoro={() => setActiveTab('focus')}
-          />
-        )}
+            {activeTab === 'analytics' && (
+              <AnalyticsTab
+                subjects={subjects}
+                quizResults={quizResults}
+                flashcards={flashcards}
+                totalFocusMinutes={totalFocusMinutes}
+                streakDays={streakDays}
+                notificationSettings={notificationSettings}
+                onUpdateNotificationSettings={(s) => setNotificationSettings(s)}
+                onSendTestNotification={handleSendTestNotification}
+                onStartPomodoro={() => setActiveTab('focus')}
+              />
+            )}
 
-        {activeTab === 'admin' && (
-          <AdminDashboardTab onOpenStoreModal={() => setIsStoreModalOpen(true)} />
+            {activeTab === 'admin' && (
+              <AdminDashboardTab 
+                onOpenStoreModal={() => setIsStoreModalOpen(true)}
+                currentUserEmail={user?.email || ''}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -587,11 +606,24 @@ export default function App() {
         isOpen={isSubscriptionOpen}
         onClose={() => setIsSubscriptionOpen(false)}
         subscription={subscription}
-        onUpdateSubscription={(newSub) => setSubscription(newSub)}
+        onUpdateSubscription={(newSub) => {
+          setSubscription(newSub);
+          saveToStorage('studyhub_subscription', newSub);
+        }}
+        userEmail={user?.email || ''}
+        userName={user?.name || ''}
         onOpenPolicy={(tab) => {
           setPolicyDefaultTab(tab);
           setIsPolicyOpen(true);
         }}
+      />
+
+      <TrialExpiredLockModal
+        isOpen={subscription.status === 'expired' && !isAdmin}
+        subscription={subscription}
+        userEmail={user?.email || ''}
+        onOpenPaymentModal={() => setIsSubscriptionOpen(true)}
+        onLogout={handleLogout}
       />
 
       <PolicyModal

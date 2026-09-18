@@ -1,4 +1,5 @@
-import { Capacitor } from '@capacitor/core';
+// src/utils/voiceInput.ts
+// Native browser speech recognition controller
 
 export type RecognitionLanguage =
   | 'en-US'

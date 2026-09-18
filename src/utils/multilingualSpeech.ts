@@ -1306,7 +1306,7 @@ export function speakAfrikaans(
 }
 
 // Compatibility export required by
-// NotesSummarizerTab.tsx and AudioPodcastTab.tsx.
+// NotesSummarizerTab.tsx, AudioPodcastTab.tsx, and AITutorTab.tsx.
 export function speakTextInLanguage(
   text: string,
   language: string = 'af-ZA',
@@ -1315,11 +1315,13 @@ export function speakTextInLanguage(
   onError?: (
     error?: unknown,
   ) => void,
+  rate?: number,
 ): void {
   onStart?.();
 
   speak(text, {
     preferredLanguage: language,
+    voiceSpeed: rate,
   })
     .then(() => {
       onEnd?.();

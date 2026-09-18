@@ -42,8 +42,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoggedIn }) =>
             <h1 className="text-xl font-bold text-[#2D362E] dark:text-white">The Study Hub</h1>
           </div>
           <p className="text-xs text-[#7A746B] dark:text-[#A6C4A7]">
-            Sign in with email to use the app. New accounts get a <strong>7-day free Pro trial</strong> that
-            starts when you create your account.
+            Sign in to start your <strong>7-day free trial</strong> automatically. Trial includes all basic functions (Notes, Flashcards, Planner, Quizzes, Focus Studio). Pro features can be activated after payment confirmation.
           </p>
         </div>
 
@@ -115,9 +114,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoggedIn }) =>
 
           {!adminHint && (
             <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-900 dark:text-blue-200 flex gap-2">
-              <Sparkles className="w-4 h-4 shrink-0" />
-              Your <strong>7-day free trial</strong> starts the moment you create your account or sign in for the
-              first time.
+              <Sparkles className="w-4 h-4 shrink-0 text-blue-600" />
+              <div>
+                Your <strong>7-day free trial starts automatically</strong> upon sign-in with full access to basic study tools. Pro features activate upon payment confirmation.
+              </div>
             </div>
           )}
 

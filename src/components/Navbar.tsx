@@ -26,10 +26,12 @@ import {
   Calendar, 
   Award, 
   Headphones, 
-  PenTool 
+  PenTool,
+  Lock
 } from 'lucide-react';
-import { TabType, Subject, GradeLevel } from '../types';
+import { TabType, Subject, GradeLevel, SubscriptionState } from '../types';
 import { GRADE_CONFIGS } from '../data/initialData';
+import { isProTab, daysLeftInTrial } from '../utils/auth';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -52,6 +54,7 @@ interface NavbarProps {
   totalFocusMinutes: number;
   streakDays: number;
   isOffline?: boolean;
+  subscription?: SubscriptionState;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -75,6 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   totalFocusMinutes,
   streakDays,
   isOffline = false,
+  subscription,
 }) => {
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'notes', label: 'AI Summarizer', icon: BookOpen },
@@ -218,15 +222,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Subscription Pro Plan Button */}
+            {/* Subscription Status & Upgrade Button */}
             {onOpenSubscriptionModal && (
               <button
                 onClick={onOpenSubscriptionModal}
-                className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-                title="Pro Subscription Plan & 7-Day Free Trial"
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 ${
+                  subscription?.status === 'active'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-400/40'
+                    : subscription?.status === 'expired'
+                    ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white border border-rose-400/50 animate-pulse'
+                    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white'
+                }`}
+                title="Subscription Status & Payment Details"
               >
-                <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-200 fill-amber-200/30" />
-                <span>Pro</span>
+                {subscription?.status === 'active' ? (
+                  <>
+                    <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-200 fill-amber-200/50" />
+                    <span>Pro Active</span>
+                  </>
+                ) : subscription?.status === 'expired' ? (
+                  <>
+                    <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                    <span>Trial Expired</span>
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-200 fill-amber-200/30" />
+                    <span>
+                      7d Trial {subscription ? `(${daysLeftInTrial(subscription)}d left)` : ''}
+                    </span>
+                  </>
+                )}
               </button>
             )}
 
@@ -305,6 +331,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             const isAdmin = item.id === 'admin';
+            const isProFeature = isProTab(item.id);
+            const isProUnlocked = subscription?.status === 'active';
+
             return (
               <button
                 key={item.id}
@@ -321,6 +350,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : isAdmin ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
                 <span>{item.label}</span>
+                {isProFeature && (
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-extrabold uppercase tracking-wider ${
+                    isActive
+                      ? 'bg-white/20 text-white border border-white/30'
+                      : isProUnlocked
+                      ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300/60'
+                  }`}>
+                    {!isProUnlocked && <Lock className="w-2.5 h-2.5 shrink-0" />}
+                    <span>Pro</span>
+                  </span>
+                )}
               </button>
             );
           })}
