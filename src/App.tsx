@@ -40,6 +40,7 @@ import { VoiceNarrationController } from './components/VoiceNarrationController'
 import { FloatingStudyTools } from './components/FloatingStudyTools';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
+import { Shield } from 'lucide-react';
 
 import { AddSubjectModal } from './components/Modals/AddSubjectModal';
 import { GeneratePlanModal } from './components/Modals/GeneratePlanModal';
@@ -384,6 +385,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         subscription={subscription}
+        isAdmin={isAdmin}
       />
 
       {/* Workspace Subject Pills Bar */}
@@ -546,10 +548,28 @@ export default function App() {
             )}
 
             {activeTab === 'admin' && (
-              <AdminDashboardTab 
-                onOpenStoreModal={() => setIsStoreModalOpen(true)}
-                currentUserEmail={user?.email || ''}
-              />
+              isAdmin ? (
+                <AdminDashboardTab 
+                  onOpenStoreModal={() => setIsStoreModalOpen(true)}
+                  currentUserEmail={user?.email || ''}
+                />
+              ) : (
+                <div className="max-w-md mx-auto my-16 p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm text-center space-y-4">
+                  <div className="w-14 h-14 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-2xl flex items-center justify-center mx-auto">
+                    <Shield className="w-7 h-7" />
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-white">Restricted Access</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    The Administrator Portal is only available to authorized platform managers.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('notes')}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
+                  >
+                    Return to Study Workspace
+                  </button>
+                </div>
+              )
             )}
           </>
         )}

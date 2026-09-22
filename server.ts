@@ -236,11 +236,11 @@ app.post('/api/payments/settle', (req, res) => {
   }
 });
 
-// 9. Admin PIN Reset (Strictly locked to 10111)
+// 9. Admin PIN Reset (Strictly locked to authorized security PIN)
 app.post('/api/admin/reset-pin', (req, res) => {
   try {
-    const pin = backendStore.resetPin();
-    res.json({ success: true, pin, message: 'Admin PIN reset to authorized PIN: 10111' });
+    backendStore.resetPin();
+    res.json({ success: true, message: 'Admin security PIN reset to authorized state' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

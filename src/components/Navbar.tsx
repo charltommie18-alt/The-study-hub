@@ -55,6 +55,7 @@ interface NavbarProps {
   streakDays: number;
   isOffline?: boolean;
   subscription?: SubscriptionState;
+  isAdmin?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -79,6 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   streakDays,
   isOffline = false,
   subscription,
+  isAdmin = false,
 }) => {
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'notes', label: 'AI Summarizer', icon: BookOpen },
@@ -94,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'achievements', label: 'Achievements & XP', icon: Trophy },
     { id: 'studyroom', label: 'Peer Study Rooms', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'admin', label: 'Admin Portal', icon: Shield },
+    ...(isAdmin ? [{ id: 'admin' as TabType, label: 'Admin Portal', icon: Shield }] : []),
   ];
 
   return (

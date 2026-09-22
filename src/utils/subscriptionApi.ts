@@ -115,7 +115,7 @@ export async function settleBackendPayment(paymentId: string, notes?: string) {
   return res.json();
 }
 
-export async function resetBackendPin(): Promise<{ success: boolean; pin: string }> {
+export async function resetBackendPin(): Promise<{ success: boolean; message?: string }> {
   const res = await fetch('/api/admin/reset-pin', { method: 'POST' });
   if (!res.ok) {
     throw new Error('Failed to reset PIN');
