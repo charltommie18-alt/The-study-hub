@@ -12,6 +12,7 @@ export interface PaymentAuditRecord {
   submittedAt: string;
   settledAt?: string;
   notes?: string;
+  isDemo?: boolean;
 }
 
 // --------------------------------------------------------------------------
@@ -346,10 +347,10 @@ function generateSeedSubscribers(): SubscriberRecord[] {
     });
   }
 
-  return list;
+  return list.map(s => ({ ...s, isDemo: true }));
 }
 
-// Initial Payment Audit Queue (Incoming real-time payments)
+// Initial Payment Audit Queue (Incoming real-time payments - flagged as demo test data)
 const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
   {
     id: 'PAY-1001',
@@ -362,7 +363,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     status: 'settled',
     submittedAt: '2026-08-27T10:14:00Z',
     settledAt: '2026-08-27T10:30:00Z',
-    notes: 'Verified in Capitec Bank App Acc 2557334258',
+    notes: 'Sample test record for Capitec Bank Acc 2557334258',
+    isDemo: true,
   },
   {
     id: 'PAY-1002',
@@ -375,7 +377,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     status: 'settled',
     submittedAt: '2026-08-22T14:20:00Z',
     settledAt: '2026-08-22T14:21:00Z',
-    notes: 'Ct Fun PayPal merchant confirmed (URJZ4DJH4RKHQ)',
+    notes: 'Sample test record for PayPal merchant (URJZ4DJH4RKHQ)',
+    isDemo: true,
   },
   {
     id: 'PAY-1003',
@@ -388,7 +391,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     status: 'settled',
     submittedAt: '2026-07-10T09:00:00Z',
     settledAt: '2026-07-10T09:05:00Z',
-    notes: 'Institutional billing invoice settled',
+    notes: 'Sample institutional billing test scenario',
+    isDemo: true,
   },
   {
     id: 'PAY-1004',
@@ -400,7 +404,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     reference: 'EFT-SN-99',
     status: 'pending_verification',
     submittedAt: '2026-09-21T16:45:00Z',
-    notes: 'Student submitted EFT proof for Capitec Bank Acc 2557334258. Check Capitec statement.',
+    notes: 'Sample EFT proof test scenario for Capitec Bank Acc 2557334258.',
+    isDemo: true,
   },
   {
     id: 'PAY-1005',
@@ -412,7 +417,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     reference: 'PP-UK-7712',
     status: 'pending_verification',
     submittedAt: '2026-09-22T11:10:00Z',
-    notes: 'Student clicked PayPal checkout. Awaiting transaction clearance on PayPal.',
+    notes: 'Sample PayPal checkout test scenario.',
+    isDemo: true,
   }
 ];
 
@@ -458,6 +464,23 @@ class SubscriberStore {
       (p) => p.status === 'pending_verification'
     ).length;
 
+    // Real live transactions (excluding pre-seeded demo entries)
+    const livePaidCount = this.subscribers.filter(
+      (s) => !s.isDemo && (s.trialStatus === 'active' || s.tier === 'Pro')
+    ).length;
+    const livePaymentsCount = this.paymentAuditQueue.filter(
+      (p) => !p.isDemo && p.status === 'settled'
+    ).length;
+    const livePendingClaims = this.paymentAuditQueue.filter(
+      (p) => !p.isDemo && p.status === 'pending_verification'
+    ).length;
+    const liveRevenueZAR = this.paymentAuditQueue
+      .filter((p) => !p.isDemo && p.status === 'settled' && p.currency === 'ZAR')
+      .reduce((sum, p) => sum + p.amount, 0);
+    const liveRevenueUSD = this.paymentAuditQueue
+      .filter((p) => !p.isDemo && p.status === 'settled' && p.currency === 'USD')
+      .reduce((sum, p) => sum + p.amount, 0);
+
     return {
       totalSubscribers: total,
       todayDAU: 812, // Matches main dashboard DAU
@@ -467,6 +490,11 @@ class SubscriberStore {
       expiredTrials,
       estimatedMRR: Math.round(estimatedMRR * 100) / 100,
       pendingPaymentsCount,
+      livePaidCount,
+      livePaymentsCount,
+      livePendingClaims,
+      liveRevenueZAR,
+      liveRevenueUSD,
       lastUpdated: new Date().toISOString(),
     };
   }
@@ -641,6 +669,7 @@ class SubscriberStore {
       status: 'pending_verification',
       submittedAt: new Date().toISOString(),
       notes: data.notes || 'Submitted via in-app payment modal.',
+      isDemo: false,
     };
 
     this.paymentAuditQueue.unshift(newRecord);

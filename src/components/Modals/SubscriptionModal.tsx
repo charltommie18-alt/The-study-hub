@@ -18,11 +18,12 @@ import {
   ExternalLink,
   Copy,
   Building2,
-  MessageCircle
+  MessageCircle,
+  Clock
 } from 'lucide-react';
 import { SubscriptionState, CurrencyCode } from '../../types';
-import { activateProWithPayment, PaymentDetailsInput } from '../../utils/auth';
-import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef } from '../../data/paymentConfig';
+import { activateProWithPayment, submitPaymentClaim, PaymentDetailsInput } from '../../utils/auth';
+import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef, generateWhatsappProofUrl } from '../../data/paymentConfig';
 import { submitPaymentProof } from '../../utils/subscriptionApi';
 
 interface SubscriptionModalProps {
@@ -182,7 +183,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             paypalTransactionId: paypalTxnId.trim() || undefined,
           };
 
-          const newSub = activateProWithPayment(subscription, input, userEmail, userName);
+          // Submit payment claim for verification - does not activate Pro for free
+          const newSub = submitPaymentClaim(subscription, input, userEmail, userName);
           setConfirmedSub(newSub);
           setIsProcessing(false);
           onUpdateSubscription(newSub);
@@ -280,54 +282,111 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </div>
           )}
 
-          {/* Payment Confirmed State (Receipt) */}
+          {/* Payment Confirmed or Pending Verification State */}
           {!isProcessing && confirmedSub && (
-            <div className="p-6 bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-950/40 dark:to-[#161D17] border border-emerald-300 dark:border-emerald-700 rounded-3xl text-center space-y-5">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <Check className="w-8 h-8 stroke-[3]" />
+            <div className={`p-6 bg-gradient-to-b ${
+              confirmedSub.status === 'active'
+                ? 'from-emerald-50 to-white dark:from-emerald-950/40 dark:to-[#161D17] border-emerald-300 dark:border-emerald-700'
+                : 'from-amber-50 to-white dark:from-amber-950/40 dark:to-[#161D17] border-amber-300 dark:border-amber-700'
+            } border rounded-3xl text-center space-y-5`}>
+              
+              <div className={`w-14 h-14 mx-auto rounded-2xl ${
+                confirmedSub.status === 'active' ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-amber-500 shadow-amber-500/30'
+              } text-white flex items-center justify-center shadow-lg`}>
+                {confirmedSub.status === 'active' ? (
+                  <Check className="w-8 h-8 stroke-[3]" />
+                ) : (
+                  <ShieldCheck className="w-8 h-8" />
+                )}
               </div>
+
               <div>
-                <h3 className="text-xl font-serif font-bold text-emerald-950 dark:text-emerald-100">
-                  Payment Confirmed — Pro Activated!
+                <h3 className={`text-xl font-serif font-bold ${
+                  confirmedSub.status === 'active' ? 'text-emerald-950 dark:text-emerald-100' : 'text-amber-950 dark:text-amber-100'
+                }`}>
+                  {confirmedSub.status === 'active'
+                    ? 'Payment Confirmed — Pro Activated!'
+                    : 'Payment Submitted — Pending Bank Verification'}
                 </h3>
-                <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">
-                  Your Pro subscription is fully active. All advanced AI tools, audio podcasts, exam memos, and deep OCR are now unlocked.
+                <p className={`text-xs ${
+                  confirmedSub.status === 'active' ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'
+                } mt-1 leading-relaxed`}>
+                  {confirmedSub.status === 'active'
+                    ? 'Your Pro subscription is fully active. All advanced AI tools, audio podcasts, exam memos, and deep OCR are now unlocked.'
+                    : 'Your payment claim has been logged into the administrator audit queue. Full Pro access will automatically activate once administrator Charl Tommie verifies receipt in Capitec / PayPal.'}
                 </p>
               </div>
 
               {/* Receipt Details Card */}
-              <div className="p-4 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-left text-xs space-y-2 font-mono">
+              <div className={`p-4 bg-white dark:bg-slate-900 border ${
+                confirmedSub.status === 'active' ? 'border-emerald-200 dark:border-emerald-800' : 'border-amber-200 dark:border-amber-800'
+              } rounded-2xl text-left text-xs space-y-2 font-mono`}>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
                   <span className="text-slate-500">Merchant:</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200">Ct Fun (The Study Hub)</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
-                  <span className="text-slate-500">Transaction Ref:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{confirmedSub.transactionId}</span>
+                  <span className="text-slate-500">Payment Reference:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{confirmedSub.transactionId}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
-                  <span className="text-slate-500">Payment Method:</span>
+                  <span className="text-slate-500">Payment Channel:</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200">{confirmedSub.paymentMethod}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
-                  <span className="text-slate-500">Amount Paid:</span>
+                  <span className="text-slate-500">Amount Due:</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200">
                     {confirmedSub.currency} {confirmedSub.priceMonthly.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Next Renewal Date:</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                    {confirmedSub.nextPaymentDue?.slice(0, 10)}
+                  <span className="text-slate-500">Settlement Status:</span>
+                  <span className={`font-bold ${
+                    confirmedSub.status === 'active' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {confirmedSub.status === 'active' ? 'Cleared & Verified' : 'Awaiting Admin Bank Check'}
                   </span>
                 </div>
               </div>
 
+              {/* Direct Proof Submission via WhatsApp */}
+              {confirmedSub.status !== 'active' && (
+                <div className="space-y-2 pt-1">
+                  <a
+                    href={generateWhatsappProofUrl(
+                      userName || '',
+                      userEmail || '',
+                      confirmedSub.transactionId || studentRef,
+                      confirmedSub.priceMonthly,
+                      confirmedSub.currency
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Send Proof of Payment on WhatsApp to Admin</span>
+                  </a>
+
+                  {paymentType === 'capitec' && (
+                    <a
+                      href={OFFICIAL_PAYMENT_CONFIG.capitecBankingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 font-semibold text-xs rounded-xl transition-all border border-red-200 dark:border-red-800 flex items-center justify-center gap-2"
+                    >
+                      <span>Log In to Capitec Online Banking</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={onClose}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#5A6D5B] hover:bg-[#485749] text-white font-bold text-sm rounded-xl transition-all shadow-md cursor-pointer active:scale-95 flex items-center justify-center gap-2"
               >
-                <span>Start Using StudyHub Pro Now</span>
+                <span>{confirmedSub.status === 'active' ? 'Start Using StudyHub Pro Now' : 'Back to Workspace'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -539,8 +598,14 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-[10px] font-bold shrink-0">
-                      Verified
+                      Instant Clearance
                     </span>
+                  </div>
+
+                  {/* Clearance badge */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 p-2 rounded-xl border border-blue-100 dark:border-blue-900/60">
+                    <span className="font-semibold">⚡ International Speed:</span>
+                    <span>Direct card &amp; PayPal balances clear instantly (under 2 minutes).</span>
                   </div>
 
                   {/* Direct PayPal Checkout Button */}
@@ -575,7 +640,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       />
                     </div>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      After completing your checkout on PayPal, enter your transaction ID or email and click confirm below to activate Pro immediately.
+                      After completing your checkout on PayPal, enter your transaction ID or email and click submit below for verification.
                     </p>
                   </div>
                 </div>
@@ -689,18 +754,60 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Clearance Timeline Info */}
+                  <div className="p-2.5 bg-red-50/60 dark:bg-red-950/30 rounded-xl border border-red-100 dark:border-red-900/50 space-y-1 text-[10px] text-red-950 dark:text-red-200">
+                    <div className="font-bold flex items-center gap-1 text-red-800 dark:text-red-300">
+                      <Clock className="w-3 h-3 text-red-600" />
+                      <span>Estimated Clearance Timeline:</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-300">
+                      <li><strong>Capitec to Capitec:</strong> Instant (clears in seconds).</li>
+                      <li><strong>Other SA Banks (FNB, Absa, Nedbank, Standard):</strong> 1 business day (or immediate if using RTC/PayShap).</li>
+                      <li><strong>International SWIFT Wire:</strong> 2 to 5 business days (subject to SARB foreign exchange approval).</li>
+                    </ul>
+                  </div>
+
                   {/* EFT Proof input */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7] block">
-                      Bank Transaction ID / Reference (From your banking app)
+                      Bank Transaction ID / Reference (From your Capitec app)
                     </label>
                     <input
                       type="text"
                       value={capitecRefInput}
                       onChange={(e) => setCapitecRefInput(e.target.value)}
-                      placeholder={`e.g. ${studentRef} or Capitec payment ref`}
+                      placeholder={`e.g. ${studentRef} or your Capitec payment ref`}
                       className="w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-red-500 font-mono"
                     />
+                  </div>
+
+                  {/* Quick Banking Action Links */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <a
+                      href={OFFICIAL_PAYMENT_CONFIG.capitecBankingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold text-[11px] rounded-xl border border-red-200 dark:border-red-800/80 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Open Capitec Online</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href={generateWhatsappProofUrl(
+                        userName || '',
+                        userEmail || '',
+                        studentRef,
+                        PRICING[selectedCurrency].amount,
+                        selectedCurrency
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] rounded-xl border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp Proof to Admin</span>
+                    </a>
                   </div>
                 </div>
               )}
@@ -806,13 +913,21 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               {/* Amazon Pay Field */}
               {paymentType === 'amazon' && (
                 <div className="p-4 bg-white dark:bg-[#181E19] border border-[#D9D1C7] dark:border-[#2D382F] rounded-2xl space-y-2 text-xs">
-                  <div className="font-bold text-[#2D362E] dark:text-white flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-orange-500" />
-                    <span>Amazon Fire 1-Click In-App Billing</span>
+                  <div className="font-bold text-[#2D362E] dark:text-white flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-orange-500" />
+                      <span>Amazon Fire 1-Click In-App Billing</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 text-[10px] font-bold">
+                      Fire OS / Android
+                    </span>
                   </div>
                   <p className="text-[#736B5E] dark:text-[#A6C4A7] leading-relaxed">
                     Charges will be billed to the Amazon payment method registered on your Fire Tablet or Amazon account.
                   </p>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400">
+                    ℹ️ <strong>Gateway Separation:</strong> Amazon in-app billing is strictly for Amazon devices and does not alter, restrict, or block direct PayPal checkout or Capitec Bank EFT transfers.
+                  </div>
                 </div>
               )}
 
@@ -833,12 +948,12 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   <Lock className="w-4 h-4" />
                   <span>
                     {paymentType === 'paypal'
-                      ? 'Confirm PayPal / Card Payment & Activate Pro'
+                      ? 'Submit PayPal Transaction for Verification'
                       : paymentType === 'capitec'
-                      ? 'Confirm Capitec EFT & Activate Pro'
+                      ? 'Submit Capitec EFT Reference for Verification'
                       : isTrial
-                      ? 'Confirm Payment Details & Start Pro ($0.00 Today)'
-                      : `Confirm Payment & Activate Pro (${PRICING[selectedCurrency].symbol}${PRICING[selectedCurrency].amount.toFixed(2)})`}
+                      ? 'Submit Payment Details for Verification'
+                      : `Submit Payment for Verification (${PRICING[selectedCurrency].symbol}${PRICING[selectedCurrency].amount.toFixed(2)})`}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>

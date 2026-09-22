@@ -106,9 +106,13 @@ export function isFeatureAccessible(
   tab: string,
   sub: SubscriptionState,
   isAdmin: boolean
-): { accessible: boolean; reason?: 'trial_expired' | 'pro_only_in_trial' } {
+): { accessible: boolean; reason?: 'trial_expired' | 'pro_only_in_trial' | 'pending_verification' } {
   if (isAdmin || sub.status === 'active') {
     return { accessible: true };
+  }
+
+  if (sub.status === 'pending_verification') {
+    return { accessible: false, reason: 'pending_verification' };
   }
 
   if (sub.status === 'expired') {
@@ -137,6 +141,54 @@ export interface PaymentDetailsInput {
   paymentType: 'card' | 'paypal' | 'amazon' | 'capitec';
   customReference?: string;
   paypalTransactionId?: string;
+}
+
+export function submitPaymentClaim(
+  currentSub: SubscriptionState,
+  details: PaymentDetailsInput,
+  userEmail?: string,
+  userName?: string
+): SubscriptionState {
+  const now = new Date();
+  let methodLabel = '';
+  let txnId = '';
+
+  if (details.paymentType === 'capitec') {
+    txnId = details.customReference?.trim() || `CAP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    methodLabel = `Capitec Bank EFT (Ref: ${txnId}, Acc: 2557334258)`;
+  } else if (details.paymentType === 'paypal') {
+    txnId = details.paypalTransactionId?.trim() || `PP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    methodLabel = `PayPal Checkout (Ref: ${txnId})`;
+  } else if (details.paymentType === 'card') {
+    const cleanDigits = details.cardNumber.replace(/\D/g, '');
+    const last4 = cleanDigits.slice(-4) || '4242';
+    methodLabel = `Card ending in ${last4}`;
+    txnId = `CARD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  } else {
+    methodLabel = 'Amazon Fire In-App Checkout';
+    txnId = `AMZN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  }
+
+  // Set to pending_verification - DOES NOT grant free Pro until Admin settles
+  const updated: SubscriptionState = {
+    status: 'pending_verification',
+    planName: `StudyHub Pro (${details.currency} ${details.amount.toFixed(2)}/mo) — Pending Bank Verification`,
+    priceMonthly: details.amount,
+    currency: details.currency,
+    isFireOSCompatible: true,
+    autoRenew: false,
+    paymentMethod: methodLabel,
+    lastPaymentDate: now.toISOString(),
+    nextPaymentDue: 'Pending Admin Bank Confirmation',
+    amountPaid: 0,
+    transactionId: txnId,
+    trialStartDate: currentSub.trialStartDate,
+    trialEndDate: currentSub.trialEndDate,
+  };
+
+  saveToStorage(SUB_KEY, updated);
+
+  return updated;
 }
 
 export function activateProWithPayment(

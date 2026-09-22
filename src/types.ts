@@ -183,6 +183,7 @@ export interface SubscriberRecord {
   paymentMethod?: string;
   lastPaymentAmount?: number;
   accessLevel: 'Basic (Trial)' | 'Full Pro Unlocked' | 'Access Suspended';
+  isDemo?: boolean;
 }
 
 export interface DailyAnalyticsRecord {
@@ -243,7 +244,7 @@ export interface Flashcard {
 }
 
 export interface SubscriptionState {
-  status: 'trial' | 'active' | 'expired';
+  status: 'trial' | 'active' | 'expired' | 'pending_verification';
   trialStartDate?: string;
   trialEndDate?: string;
   planName: string;

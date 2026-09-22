@@ -18,6 +18,11 @@ export interface SubscribersApiResponse {
     expiredTrials: number;
     estimatedMRR: number;
     pendingPaymentsCount: number;
+    livePaidCount?: number;
+    livePaymentsCount?: number;
+    livePendingClaims?: number;
+    liveRevenueZAR?: number;
+    liveRevenueUSD?: number;
     lastUpdated: string;
   };
 }
