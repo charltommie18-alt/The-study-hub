@@ -23,6 +23,7 @@ import {
 import { SubscriptionState, CurrencyCode } from '../../types';
 import { activateProWithPayment, PaymentDetailsInput } from '../../utils/auth';
 import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef } from '../../data/paymentConfig';
+import { submitPaymentProof } from '../../utils/subscriptionApi';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -185,6 +186,18 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           setConfirmedSub(newSub);
           setIsProcessing(false);
           onUpdateSubscription(newSub);
+
+          // Submit payment claim to real-time backend audit queue for Charl Tommie
+          const refToLog = (paymentType === 'paypal' ? paypalTxnId.trim() : paymentType === 'capitec' ? capitecRefInput.trim() : studentRef) || studentRef;
+          submitPaymentProof({
+            studentEmail: userEmail || 'student@thestudyhub.app',
+            studentName: userName || cardholderName || 'Student Learner',
+            paymentType,
+            amount: PRICING[selectedCurrency].amount,
+            currency: selectedCurrency,
+            reference: refToLog,
+            notes: `Checkout submission via ${paymentType.toUpperCase()} (${selectedCurrency} ${PRICING[selectedCurrency].amount})`,
+          }).catch((err) => console.warn('Failed to sync payment claim to backend:', err));
         }, 800);
       }, 700);
     }, 700);

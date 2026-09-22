@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import * as pdfParseModule from 'pdf-parse';
+import { backendStore } from './src/serverSubscriberStore';
 
 const pdfParse: any = (pdfParseModule as any).default || pdfParseModule;
 
@@ -125,6 +126,124 @@ app.get('/api/security/status', (req, res) => {
       uptimeStart: firewallStats.startTime,
     },
   });
+});
+
+// -------------------------------------------------------------
+// Real-Time Backend Subscriber & Payment Verification Engine
+// -------------------------------------------------------------
+
+// 1. Query Subscribers (Real-time backend state, matches dashboard DAU, search, filter, pagination)
+app.get('/api/admin/subscribers', (req, res) => {
+  try {
+    const { status, currency, search, page, limit } = req.query;
+    const result = backendStore.querySubscribers({
+      status: status ? String(status) : undefined,
+      currency: currency ? String(currency) : undefined,
+      search: search ? String(search) : undefined,
+      page: page ? parseInt(String(page), 10) : 1,
+      limit: limit ? parseInt(String(limit), 10) : 50,
+    });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. Real-time Aggregate Metrics
+app.get('/api/admin/metrics', (req, res) => {
+  try {
+    const metrics = backendStore.getMetrics();
+    res.json({ success: true, metrics });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Add New Subscriber
+app.post('/api/admin/subscribers', (req, res) => {
+  try {
+    const record = backendStore.addSubscriber(req.body);
+    res.json({ success: true, record });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Update Existing Subscriber
+app.put('/api/admin/subscribers/:id', (req, res) => {
+  try {
+    const updated = backendStore.updateSubscriber(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ success: false, error: 'Subscriber not found' });
+    res.json({ success: true, record: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. Perform Subscriber Action (extend_trial, activate_pro, lock_account, mark_paid)
+app.post('/api/admin/subscribers/:id/action', (req, res) => {
+  try {
+    const { action, payload } = req.body;
+    const updated = backendStore.performAction(req.params.id, action, payload);
+    if (!updated) return res.status(404).json({ success: false, error: 'Subscriber not found' });
+    res.json({ success: true, record: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. Payment Audit Queue (Auditing incoming student payments for Charl Tommie)
+app.get('/api/payments/queue', (req, res) => {
+  try {
+    const queue = backendStore.getPaymentQueue();
+    res.json({ success: true, queue });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. Verify / Submit Incoming Payment Proof (Capitec EFT or PayPal Transaction)
+app.post('/api/payments/verify', (req, res) => {
+  try {
+    const { studentEmail, studentName, paymentType, amount, currency, reference, notes } = req.body;
+    if (!studentEmail || !reference) {
+      return res.status(400).json({ success: false, error: 'Student email and payment reference are required.' });
+    }
+    const payment = backendStore.logPaymentVerification({
+      studentEmail,
+      studentName: studentName || studentEmail.split('@')[0],
+      paymentType: paymentType || 'capitec',
+      amount: Number(amount) || 89.0,
+      currency: currency || 'ZAR',
+      reference,
+      notes,
+    });
+    res.json({ success: true, payment });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8. Settle Payment (Admin marks payment cleared in Capitec or PayPal)
+app.post('/api/payments/settle', (req, res) => {
+  try {
+    const { paymentId, notes } = req.body;
+    const settled = backendStore.settlePayment(paymentId, notes);
+    if (!settled) return res.status(404).json({ success: false, error: 'Payment record not found' });
+    res.json({ success: true, payment: settled });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 9. Admin PIN Reset (Strictly locked to 10111)
+app.post('/api/admin/reset-pin', (req, res) => {
+  try {
+    const pin = backendStore.resetPin();
+    res.json({ success: true, pin, message: 'Admin PIN reset to authorized PIN: 10111' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Helper to get Gemini client

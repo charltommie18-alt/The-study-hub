@@ -254,13 +254,13 @@ export const INITIAL_SUBSCRIBERS: SubscriberRecord[] = [
 ];
 
 export const INITIAL_DAILY_ANALYTICS: DailyAnalyticsRecord[] = [
-  { date: '2026-08-06', activeUsers: 420, docUploads: 85, aiPromptsCount: 1240, quizzesTaken: 310, newSubscriptions: 12, revenueUsd: 89.50 },
-  { date: '2026-08-07', activeUsers: 485, docUploads: 110, aiPromptsCount: 1450, quizzesTaken: 380, newSubscriptions: 15, revenueUsd: 112.00 },
-  { date: '2026-08-08', activeUsers: 512, docUploads: 128, aiPromptsCount: 1620, quizzesTaken: 420, newSubscriptions: 18, revenueUsd: 134.50 },
-  { date: '2026-08-09', activeUsers: 590, docUploads: 145, aiPromptsCount: 1890, quizzesTaken: 490, newSubscriptions: 22, revenueUsd: 168.00 },
-  { date: '2026-08-10', activeUsers: 640, docUploads: 162, aiPromptsCount: 2100, quizzesTaken: 530, newSubscriptions: 25, revenueUsd: 195.00 },
-  { date: '2026-08-11', activeUsers: 710, docUploads: 188, aiPromptsCount: 2350, quizzesTaken: 610, newSubscriptions: 31, revenueUsd: 242.00 },
-  { date: '2026-08-12', activeUsers: 785, docUploads: 215, aiPromptsCount: 2680, quizzesTaken: 690, newSubscriptions: 36, revenueUsd: 284.00 },
+  { date: '2026-09-16', activeUsers: 640, docUploads: 165, aiPromptsCount: 2150, quizzesTaken: 540, newSubscriptions: 24, revenueUsd: 188.00 },
+  { date: '2026-09-17', activeUsers: 690, docUploads: 180, aiPromptsCount: 2310, quizzesTaken: 595, newSubscriptions: 28, revenueUsd: 215.50 },
+  { date: '2026-09-18', activeUsers: 725, docUploads: 194, aiPromptsCount: 2460, quizzesTaken: 630, newSubscriptions: 31, revenueUsd: 246.00 },
+  { date: '2026-09-19', activeUsers: 740, docUploads: 202, aiPromptsCount: 2520, quizzesTaken: 650, newSubscriptions: 33, revenueUsd: 260.00 },
+  { date: '2026-09-20', activeUsers: 765, docUploads: 208, aiPromptsCount: 2590, quizzesTaken: 672, newSubscriptions: 34, revenueUsd: 272.50 },
+  { date: '2026-09-21', activeUsers: 785, docUploads: 215, aiPromptsCount: 2680, quizzesTaken: 690, newSubscriptions: 36, revenueUsd: 284.00 },
+  { date: '2026-09-22', activeUsers: 812, docUploads: 228, aiPromptsCount: 2840, quizzesTaken: 725, newSubscriptions: 39, revenueUsd: 312.50 },
 ];
 
 export const INITIAL_SUBJECTS: Subject[] = [
