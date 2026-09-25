@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   subscription,
   isAdmin = false,
 }) => {
-  const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  const baseNavItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'notes', label: 'AI Summarizer', icon: BookOpen },
     { id: 'mockexam', label: 'Past Exams & Memos', icon: Award },
     { id: 'podcast', label: 'Audio Podcasts', icon: Headphones },
@@ -96,8 +96,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'achievements', label: 'Achievements & XP', icon: Trophy },
     { id: 'studyroom', label: 'Peer Study Rooms', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    ...(isAdmin ? [{ id: 'admin' as TabType, label: 'Admin Portal', icon: Shield }] : []),
   ];
+
+  // Admin Portal is strictly visible ONLY for verified administrator (Charl Tommie)
+  const navItems = isAdmin 
+    ? [...baseNavItems, { id: 'admin' as TabType, label: 'Admin Portal', icon: Shield }]
+    : baseNavItems;
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 shadow-xs transition-colors">

@@ -1,4 +1,4 @@
-import { SubscriberRecord, CurrencyCode } from '../types';
+import { SubscriberRecord, CurrencyCode, DiagnosticsReport, DailySecurityReportData } from '../types';
 import { PaymentAuditRecord } from '../serverSubscriberStore';
 
 export interface SubscribersApiResponse {
@@ -124,6 +124,50 @@ export async function resetBackendPin(): Promise<{ success: boolean; message?: s
   const res = await fetch('/api/admin/reset-pin', { method: 'POST' });
   if (!res.ok) {
     throw new Error('Failed to reset PIN');
+  }
+  return res.json();
+}
+
+export async function fetchDiagnostics(): Promise<{ success: boolean; report: DiagnosticsReport }> {
+  const res = await fetch('/api/admin/diagnostics');
+  if (!res.ok) {
+    throw new Error('Failed to run diagnostics');
+  }
+  return res.json();
+}
+
+export async function fixDiagnosticsFaults(): Promise<{
+  success: boolean;
+  result: { fixedCount: number; faultsResolved: string[] };
+  updatedReport: DiagnosticsReport;
+}> {
+  const res = await fetch('/api/admin/diagnostics/fix', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to auto-fix diagnostic faults');
+  }
+  return res.json();
+}
+
+export async function fetchDailyReport(): Promise<{ success: boolean; dailyReport: DailySecurityReportData }> {
+  const res = await fetch('/api/admin/daily-report');
+  if (!res.ok) {
+    throw new Error('Failed to fetch daily report');
+  }
+  return res.json();
+}
+
+export async function verifyUserSubscriptionStatus(email: string): Promise<{
+  success: boolean;
+  status: 'active' | 'trial' | 'expired' | 'pending_verification';
+  isPro: boolean;
+  reason: string;
+}> {
+  const res = await fetch(`/api/user/subscription-status?email=${encodeURIComponent(email)}`);
+  if (!res.ok) {
+    throw new Error('Failed to check user subscription status');
   }
   return res.json();
 }

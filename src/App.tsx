@@ -15,7 +15,17 @@ import { DEFAULT_NOTIFICATION_SETTINGS, sendBrowserNotification } from './utils/
 import { PushNotificationSettings } from './types';
 import { calculateSpacedRepetition, RepetitionRating } from './utils/spacedRepetition';
 import { LoginModal } from './components/Modals/LoginModal';
-import { loadUser, logoutUser, subscriptionForUser, daysLeftInTrial, isFeatureAccessible, isAdminEmail, type UserAccount } from './utils/auth';
+import { 
+  loadUser, 
+  logoutUser, 
+  subscriptionForUser, 
+  daysLeftInTrial, 
+  isFeatureAccessible, 
+  isAdminEmail, 
+  isAdminAuthenticated,
+  loginWithAdminPin,
+  type UserAccount 
+} from './utils/auth';
 import { ProFeatureGateCard } from './components/ProFeatureGateCard';
 import { TrialExpiredLockModal } from './components/Modals/TrialExpiredLockModal';
 
@@ -119,8 +129,31 @@ export default function App() {
   };
 
   const trialDays = daysLeftInTrial(subscription);
-  const isAdmin = user?.role === 'admin' || isAdminEmail(user?.email || '');
+  const isAdmin = Boolean(user?.isAdmin) || isAdminEmail(user?.email || '') || isAdminAuthenticated();
   const canAccessCurrentTab = isFeatureAccessible(activeTab, subscription, isAdmin);
+
+  // Authoritative Backend Subscription Check: Prevent local storage tampering & revoke unpaid Pro
+  useEffect(() => {
+    if (!user || isAdminEmail(user.email)) return;
+
+    fetch(`/api/user/subscription-status?email=${encodeURIComponent(user.email)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          // If server says they are not Pro, but client has 'active', downgrade to correct status
+          if (!data.isPro && subscription.status === 'active') {
+            const corrected: SubscriptionState = {
+              ...subscription,
+              status: data.status,
+              planName: data.status === 'expired' ? 'Pro Tier (7-Day Trial Expired)' : '7-Day Free Trial (Basic Functions)',
+            };
+            setSubscription(corrected);
+            saveToStorage('studyhub_subscription', corrected);
+          }
+        }
+      })
+      .catch((err) => console.warn('Subscription sync check error:', err));
+  }, [user?.email, subscription.status]);
 
   const handleLogout = () => {
     logoutUser();
@@ -548,28 +581,19 @@ export default function App() {
             )}
 
             {activeTab === 'admin' && (
-              isAdmin ? (
-                <AdminDashboardTab 
-                  onOpenStoreModal={() => setIsStoreModalOpen(true)}
-                  currentUserEmail={user?.email || ''}
-                />
-              ) : (
-                <div className="max-w-md mx-auto my-16 p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm text-center space-y-4">
-                  <div className="w-14 h-14 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-2xl flex items-center justify-center mx-auto">
-                    <Shield className="w-7 h-7" />
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-white">Restricted Access</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    The Administrator Portal is only available to authorized platform managers.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('notes')}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
-                  >
-                    Return to Study Workspace
-                  </button>
-                </div>
-              )
+              <AdminDashboardTab 
+                onOpenStoreModal={() => setIsStoreModalOpen(true)}
+                currentUserEmail={user?.email || 'charltommie18@gmail.com'}
+                onAdminUnlocked={(pin) => {
+                  try {
+                    if (pin) {
+                      const adminUser = loginWithAdminPin(pin);
+                      setUser(adminUser);
+                      setSubscription(subscriptionForUser(adminUser.email));
+                    }
+                  } catch {}
+                }}
+              />
             )}
           </>
         )}

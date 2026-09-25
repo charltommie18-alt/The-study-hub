@@ -315,6 +315,62 @@ export interface FocusSessionLog {
   date: string;
 }
 
+export interface DiagnosticFault {
+  id: string;
+  category: 'unpaid_pro' | 'expired_trial' | 'demo_mrr_inflation' | 'pending_unverified' | 'admin_lock';
+  severity: 'critical' | 'high' | 'medium' | 'info';
+  title: string;
+  description: string;
+  affectedCount: number;
+  affectedSample: string[];
+  remediationAction: string;
+  isResolved: boolean;
+}
+
+export interface DiagnosticsReport {
+  timestamp: string;
+  systemHealthScore: number;
+  totalSubscribersAudited: number;
+  unpaidProUsersFound: number;
+  expiredTrialsFound: number;
+  pendingClaimsFound: number;
+  demoInflationCount: number;
+  adminLockStatus: 'locked' | 'unlocked';
+  adminPinIntegrity: boolean;
+  bankReconciliationStatus: {
+    capitecAcc: string;
+    capitecVerifiedRevenueZAR: number;
+    paypalMerchant: string;
+    paypalVerifiedRevenueUSD: number;
+    unsettledClaimsCount: number;
+  };
+  faults: DiagnosticFault[];
+  summaryMessage: string;
+}
+
+export interface DailySecurityReportData {
+  reportDate: string;
+  merchantName: string;
+  merchantEmail: string;
+  adminPinEnforced: string;
+  bankAccounts: {
+    capitecAcc: string;
+    paypalMerchantId: string;
+  };
+  todayRealClearedRevenue: {
+    zar: number;
+    usd: number;
+  };
+  activeUsersDAU: number;
+  activePaidSubscribers: number;
+  activeTrialSubscribers: number;
+  expiredSuspendedSubscribers: number;
+  pendingBankClaims: number;
+  zeroUnpaidAccessGuaranteed: boolean;
+  faultsIdentifiedAndFixed: number;
+  auditFindings: string[];
+}
+
 export interface StudyPlanDay {
   dayNumber: number;
   topicName: string;

@@ -1,11 +1,13 @@
 import { SubscriptionState, CurrencyCode } from '../types';
 import { loadFromStorage, saveToStorage } from './storage';
 
-/** Admin account — always free / full access, no trial clock */
+/** Admin account — strictly locked to Charl Tommie with PIN 10111 */
 export const ADMIN_EMAILS = [
-  'charltommie18@gmail',
   'charltommie18@gmail.com',
+  'charltommie18@gmail',
 ];
+
+export const AUTHORIZED_ADMIN_PIN = '10111';
 
 export interface UserAccount {
   email: string;
@@ -16,14 +18,58 @@ export interface UserAccount {
 
 const USER_KEY = 'studyhub_user_account';
 const SUB_KEY = 'studyhub_subscription';
+const ADMIN_UNLOCKED_KEY = 'studyhub_admin_unlocked';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
 export function isAdminEmail(email: string): boolean {
+  if (!email) return false;
   const e = normalizeEmail(email);
-  return ADMIN_EMAILS.some((a) => a === e || e.startsWith('charltommie18@gmail'));
+  return ADMIN_EMAILS.includes(e);
+}
+
+export function verifyAdminPin(pin: string): boolean {
+  return pin.trim() === AUTHORIZED_ADMIN_PIN;
+}
+
+export function isAdminAuthenticated(): boolean {
+  try {
+    return localStorage.getItem(ADMIN_UNLOCKED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function loginWithAdminPin(pin: string): UserAccount {
+  if (!verifyAdminPin(pin)) {
+    throw new Error('Invalid Admin PIN. Access denied.');
+  }
+
+  try {
+    localStorage.setItem('studyhub_admin_pin', AUTHORIZED_ADMIN_PIN);
+    localStorage.setItem(ADMIN_UNLOCKED_KEY, 'true');
+  } catch {}
+
+  const adminUser: UserAccount = {
+    email: 'charltommie18@gmail.com',
+    displayName: 'Charl Tommie (Admin)',
+    createdAt: new Date().toISOString(),
+    isAdmin: true,
+  };
+
+  saveUser(adminUser);
+  const adminSub = subscriptionForUser(adminUser.email);
+  saveToStorage(SUB_KEY, adminSub);
+
+  return adminUser;
+}
+
+export function lockAdminSession(): void {
+  try {
+    localStorage.removeItem(ADMIN_UNLOCKED_KEY);
+  } catch {}
 }
 
 export function loadUser(): UserAccount | null {

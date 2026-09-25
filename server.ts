@@ -246,6 +246,51 @@ app.post('/api/admin/reset-pin', (req, res) => {
   }
 });
 
+// 10. Run Full System Diagnostics & Fault Scanner
+app.get('/api/admin/diagnostics', (req, res) => {
+  try {
+    const report = backendStore.runDiagnostics();
+    res.json({ success: true, report });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 11. Auto-Fix All Diagnostics Faults (Revoke Unpaid Pro & Lock Expired Trials)
+app.post('/api/admin/diagnostics/fix', (req, res) => {
+  try {
+    const result = backendStore.fixDiagnosticsFaults();
+    const updatedReport = backendStore.runDiagnostics();
+    res.json({ success: true, result, updatedReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 12. Official Daily Security & Platform Audit Report for Charl Tommie
+app.get('/api/admin/daily-report', (req, res) => {
+  try {
+    const dailyReport = backendStore.getDailyReport();
+    res.json({ success: true, dailyReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 13. Verify Client-side User Subscription Status
+app.get('/api/user/subscription-status', (req, res) => {
+  try {
+    const email = String(req.query.email || '');
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email parameter is required.' });
+    }
+    const status = backendStore.verifyUserSubscription(email);
+    res.json({ success: true, ...status });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Helper to get Gemini client
 function getGeminiAI() {
   const apiKey = process.env.GEMINI_API_KEY;
