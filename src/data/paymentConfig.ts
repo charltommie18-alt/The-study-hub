@@ -75,3 +75,27 @@ export function generateWhatsappProofUrl(
   );
   return phone ? `https://wa.me/${phone}?text=${message}` : `https://wa.me/?text=${message}`;
 }
+
+/**
+ * Generate a direct Email link for sending proof of payment to Charl Tommie
+ */
+export function generateEmailProofUrl(
+  studentName: string,
+  studentEmail: string,
+  reference: string,
+  amount: number,
+  currency: string
+): string {
+  const subject = encodeURIComponent(`The Study Hub Pro Payment Proof - ${reference} (${studentName || 'Student'})`);
+  const body = encodeURIComponent(
+    `Hi Charl,\n\nI have completed my payment transfer for The Study Hub Pro.\n\n` +
+    `Payment Details:\n` +
+    `- Student Name: ${studentName || 'Learner'}\n` +
+    `- Account Email: ${studentEmail}\n` +
+    `- Amount: ${currency} ${amount.toFixed(2)}\n` +
+    `- Reference / Transaction ID: ${reference}\n` +
+    `- Destination: Capitec Bank (Acc: 2557334258) / PayPal (Ct Fun)\n\n` +
+    `I have attached my proof of payment (screenshot / PDF) to this email.\nPlease verify the deposit and activate my Pro subscription.\n\nThank you!`
+  );
+  return `mailto:${OFFICIAL_PAYMENT_CONFIG.supportEmail}?subject=${subject}&body=${body}`;
+}

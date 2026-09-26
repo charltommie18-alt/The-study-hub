@@ -27,7 +27,9 @@ import {
   Award, 
   Headphones, 
   PenTool,
-  Lock
+  Lock,
+  KeyRound,
+  Unlock
 } from 'lucide-react';
 import { TabType, Subject, GradeLevel, SubscriptionState } from '../types';
 import { GRADE_CONFIGS } from '../data/initialData';
@@ -56,6 +58,8 @@ interface NavbarProps {
   isOffline?: boolean;
   subscription?: SubscriptionState;
   isAdmin?: boolean;
+  onOpenAdminUnlock?: () => void;
+  onLockAdmin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -81,6 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isOffline = false,
   subscription,
   isAdmin = false,
+  onOpenAdminUnlock,
+  onLockAdmin,
 }) => {
   const baseNavItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'notes', label: 'AI Summarizer', icon: BookOpen },
@@ -226,6 +232,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Download className="w-3.5 h-3.5 text-amber-200" />
                 <span className="font-extrabold">Laai Af</span>
               </button>
+            )}
+
+            {/* Admin Portal Lock / Unlock Button on Top */}
+            {isAdmin ? (
+              <button
+                onClick={onLockAdmin}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 border border-amber-400/40"
+                title="Lock Admin Workspace"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-200" />
+                <span>Lock Admin</span>
+              </button>
+            ) : (
+              onOpenAdminUnlock && (
+                <button
+                  onClick={onOpenAdminUnlock}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 border border-slate-200 dark:border-slate-700"
+                  title="Unlock Admin Portal (Owner PIN Required)"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Admin Unlock</span>
+                </button>
+              )
             )}
 
             {/* Subscription Status & Upgrade Button */}

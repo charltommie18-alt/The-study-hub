@@ -24,10 +24,12 @@ import {
   isAdminEmail, 
   isAdminAuthenticated,
   loginWithAdminPin,
+  lockAdminSession,
   type UserAccount 
 } from './utils/auth';
 import { ProFeatureGateCard } from './components/ProFeatureGateCard';
 import { TrialExpiredLockModal } from './components/Modals/TrialExpiredLockModal';
+import { AdminUnlockModal } from './components/Modals/AdminUnlockModal';
 
 import { Navbar } from './components/Navbar';
 import { HomeScreenInstallBanner } from './components/HomeScreenInstallBanner';
@@ -122,6 +124,20 @@ export default function App() {
   const [isAddPlanOpen, setIsAddPlanOpen] = useState<boolean>(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState<boolean>(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
+  const [isAdminUnlockOpen, setIsAdminUnlockOpen] = useState<boolean>(false);
+
+  const handleLockAdmin = () => {
+    lockAdminSession();
+    if (user?.email && isAdminEmail(user.email)) {
+      logoutUser();
+      setUser(null);
+    } else {
+      setUser(loadUser());
+    }
+    if (activeTab === 'admin') {
+      setActiveTab('notes');
+    }
+  };
 
   const handleLoggedIn = (u: UserAccount) => {
     setUser(u);
@@ -419,6 +435,8 @@ export default function App() {
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         subscription={subscription}
         isAdmin={isAdmin}
+        onOpenAdminUnlock={() => setIsAdminUnlockOpen(true)}
+        onLockAdmin={handleLockAdmin}
       />
 
       {/* Workspace Subject Pills Bar */}
@@ -584,6 +602,7 @@ export default function App() {
               <AdminDashboardTab 
                 onOpenStoreModal={() => setIsStoreModalOpen(true)}
                 currentUserEmail={user?.email || 'charltommie18@gmail.com'}
+                onLockAdmin={handleLockAdmin}
                 onAdminUnlocked={(pin) => {
                   try {
                     if (pin) {
@@ -698,6 +717,21 @@ export default function App() {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      <AdminUnlockModal
+        isOpen={isAdminUnlockOpen}
+        onClose={() => setIsAdminUnlockOpen(false)}
+        onUnlocked={(pin) => {
+          try {
+            const adminUser = loginWithAdminPin(pin);
+            setUser(adminUser);
+            setSubscription(subscriptionForUser(adminUser.email));
+            setActiveTab('admin');
+          } catch (e) {
+            console.error(e);
+          }
+        }}
       />
 
       {/* Global AI Voice Audio Script Bar with Pause / Resume / Speed */}

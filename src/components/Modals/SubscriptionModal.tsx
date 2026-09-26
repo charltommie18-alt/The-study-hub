@@ -19,11 +19,12 @@ import {
   Copy,
   Building2,
   MessageCircle,
-  Clock
+  Clock,
+  Mail
 } from 'lucide-react';
 import { SubscriptionState, CurrencyCode } from '../../types';
 import { activateProWithPayment, submitPaymentClaim, PaymentDetailsInput } from '../../utils/auth';
-import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef, generateWhatsappProofUrl } from '../../data/paymentConfig';
+import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef, generateWhatsappProofUrl, generateEmailProofUrl } from '../../data/paymentConfig';
 import { submitPaymentProof } from '../../utils/subscriptionApi';
 
 interface SubscriptionModalProps {
@@ -130,21 +131,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     setFormError('');
 
     if (paymentType === 'card') {
-      const cleanDigits = cardNumber.replace(/\D/g, '');
       if (!cardholderName.trim()) {
-        setFormError('Please enter the cardholder name.');
-        return;
-      }
-      if (cleanDigits.length < 15) {
-        setFormError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
-        setFormError('Please enter a valid expiry date in MM/YY format.');
-        return;
-      }
-      if (cvv.length < 3) {
-        setFormError('Please enter the 3 or 4 digit CVV/CVC code.');
+        setFormError('Please enter the cardholder or student name.');
         return;
       }
     } else if (paymentType === 'paypal') {
@@ -349,9 +337,23 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
               </div>
 
-              {/* Direct Proof Submission via WhatsApp */}
+              {/* Direct Proof Submission via Email & WhatsApp */}
               {confirmedSub.status !== 'active' && (
                 <div className="space-y-2 pt-1">
+                  <a
+                    href={generateEmailProofUrl(
+                      userName || '',
+                      userEmail || '',
+                      confirmedSub.transactionId || studentRef,
+                      confirmedSub.priceMonthly,
+                      confirmedSub.currency
+                    )}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>Email Proof of Payment to Charl Tommie</span>
+                  </a>
+
                   <a
                     href={generateWhatsappProofUrl(
                       userName || '',
@@ -362,10 +364,10 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Send Proof of Payment on WhatsApp to Admin</span>
+                    <span>Send Proof via WhatsApp</span>
                   </a>
 
                   {paymentType === 'capitec' && (
@@ -812,99 +814,83 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
               )}
 
-              {/* Credit Card Input Fields */}
+              {/* Credit & Debit Card via Official Hosted Gateway */}
               {paymentType === 'card' && (
-                <div className="space-y-3 p-4 bg-white dark:bg-[#181E19] border border-[#D9D1C7] dark:border-[#2D382F] rounded-2xl">
+                <div className="space-y-3 p-4 bg-white dark:bg-[#181E19] border border-emerald-200 dark:border-emerald-900/60 rounded-2xl">
                   
                   <div className="flex items-center justify-between text-xs text-[#736B5E] dark:text-[#A6C4A7] mb-1">
-                    <span className="font-bold">Direct Card Information</span>
+                    <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Credit &amp; Debit Card Gateway</span>
+                    </span>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                       <Lock className="w-3 h-3" />
-                      <span>{getCardBrand()}</span>
+                      <span>256-Bit Encrypted</span>
                     </span>
                   </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Cardholder Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={cardholderName}
-                      onChange={(e) => setCardholderName(e.target.value)}
-                      placeholder="e.g. Charl Tommie"
-                      className="mt-1 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+                  <p className="text-[11px] text-[#575047] dark:text-[#A6C4A7] leading-relaxed">
+                    Card payments are processed securely through our verified merchant gateway (Ct Fun / PayPal Hosted).
+                    <strong> No PayPal account required</strong> — you can pay with any Visa, Mastercard, American Express, or Debit card directly.
+                  </p>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Card Number</label>
-                    <div className="relative mt-1">
-                      <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  {/* 1-Click Gateway Launcher */}
+                  <a
+                    href={OFFICIAL_PAYMENT_CONFIG.paypalCheckoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <span>Proceed to Card Checkout ({PRICING[selectedCurrency].symbol}{PRICING[selectedCurrency].amount.toFixed(2)})</span>
+                    <ExternalLink className="w-4 h-4 shrink-0" />
+                  </a>
+
+                  <div className="pt-2 border-t border-[#E8E2D8] dark:border-[#2D382F] space-y-2">
+                    <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block">
+                      Cardholder &amp; Payment Confirmation
+                    </span>
+
+                    <div>
+                      <label className="text-[10px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Cardholder / Student Full Name</label>
                       <input
                         type="text"
                         required
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        placeholder="4532 •••• •••• 8912"
-                        className="w-full pl-9 pr-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white font-mono focus:outline-none focus:border-blue-500"
+                        value={cardholderName}
+                        onChange={(e) => setCardholderName(e.target.value)}
+                        placeholder="e.g. Charl Tommie"
+                        className="mt-0.5 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Expiry Date</label>
-                      <input
-                        type="text"
-                        required
-                        value={expiryDate}
-                        onChange={handleExpiryChange}
-                        placeholder="MM / YY"
-                        className="mt-1 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white font-mono focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Security Code (CVV)</label>
-                      <input
-                        type="password"
-                        required
-                        maxLength={4}
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                        placeholder="3 or 4 digits"
-                        className="mt-1 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white font-mono focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Country / Region</label>
-                      <select
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        className="mt-1 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="South Africa">South Africa</option>
-                        <option value="United States">United States</option>
-                        <option value="United Kingdom">United Kingdom</option>
-                        <option value="European Union">European Union</option>
-                        <option value="Jamaica">Jamaica</option>
-                        <option value="Nigeria">Nigeria</option>
-                        <option value="Kenya">Kenya</option>
-                        <option value="Canada">Canada</option>
-                        <option value="Australia">Australia</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Postal / Zip Code</label>
-                      <input
-                        type="text"
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                        placeholder="e.g. 8001"
-                        className="mt-1 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-blue-500"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Transaction / Receipt Code (Optional)</label>
+                        <input
+                          type="text"
+                          value={paypalTxnId}
+                          onChange={(e) => setPaypalTxnId(e.target.value)}
+                          placeholder="e.g. CARD-9842"
+                          className="mt-0.5 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white font-mono focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-[#575047] dark:text-[#A6C4A7]">Billing Country / Region</label>
+                        <select
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="mt-0.5 w-full px-3 py-2 bg-[#FBF9F5] dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="South Africa">South Africa</option>
+                          <option value="United States">United States</option>
+                          <option value="United Kingdom">United Kingdom</option>
+                          <option value="European Union">European Union</option>
+                          <option value="Jamaica">Jamaica</option>
+                          <option value="Nigeria">Nigeria</option>
+                          <option value="Kenya">Kenya</option>
+                          <option value="Canada">Canada</option>
+                          <option value="Australia">Australia</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
