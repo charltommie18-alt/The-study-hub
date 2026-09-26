@@ -58,6 +58,7 @@ interface NavbarProps {
   isOffline?: boolean;
   subscription?: SubscriptionState;
   isAdmin?: boolean;
+  isAdminUnlocked?: boolean;
   onOpenAdminUnlock?: () => void;
   onLockAdmin?: () => void;
 }
@@ -85,6 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isOffline = false,
   subscription,
   isAdmin = false,
+  isAdminUnlocked = false,
   onOpenAdminUnlock,
   onLockAdmin,
 }) => {
@@ -106,7 +108,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Admin Portal is strictly visible ONLY for verified administrator (Charl Tommie)
   const navItems = isAdmin 
-    ? [...baseNavItems, { id: 'admin' as TabType, label: 'Admin Portal', icon: Shield }]
+    ? [...baseNavItems, { 
+        id: 'admin' as TabType, 
+        label: isAdminUnlocked ? 'Admin Portal' : 'Admin 🔒', 
+        icon: isAdminUnlocked ? Shield : Lock 
+      }]
     : baseNavItems;
 
   return (
@@ -235,19 +241,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             {/* Admin Portal Lock / Unlock Button on Top */}
-            {isAdmin ? (
-              <button
-                onClick={onLockAdmin}
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 border border-amber-400/40"
-                title="Lock Admin Workspace"
-              >
-                <Lock className="w-3.5 h-3.5 text-amber-200" />
-                <span>Lock Admin</span>
-              </button>
-            ) : (
-              onOpenAdminUnlock && (
+            {isAdmin && (
+              isAdminUnlocked ? (
                 <button
-                  onClick={onOpenAdminUnlock}
+                  onClick={onLockAdmin}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 border border-amber-400/40"
+                  title="Lock Admin Workspace"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-200" />
+                  <span>Lock Admin</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setActiveTab('admin');
+                    if (onOpenAdminUnlock) onOpenAdminUnlock();
+                  }}
                   className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 border border-slate-200 dark:border-slate-700"
                   title="Unlock Admin Portal (Owner PIN Required)"
                 >

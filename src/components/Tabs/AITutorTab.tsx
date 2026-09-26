@@ -727,7 +727,7 @@ export const AITutorTab: React.FC<AITutorTabProps> = ({
               >
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id} className="bg-white dark:bg-[#1A231C] text-[#2D362E] dark:text-[#E2EFE3]">
-                    {s.name} ({s.code})
+                    {s.name}
                   </option>
                 ))}
               </select>

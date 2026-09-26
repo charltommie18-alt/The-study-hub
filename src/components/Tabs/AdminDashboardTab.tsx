@@ -42,7 +42,8 @@ import {
   Copy,
   Printer,
   FileCheck,
-  Mail
+  Mail,
+  Bell
 } from 'lucide-react';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../data/paymentConfig';
 import { 
@@ -55,6 +56,7 @@ import {
   fetchDiagnostics,
   fixDiagnosticsFaults,
   returnAllFreeSubscriptionsToTrial,
+  broadcastPaymentReminder,
   fetchDailyReport
 } from '../../utils/subscriptionApi';
 import { PaymentAuditRecord } from '../../serverSubscriberStore';
@@ -64,13 +66,15 @@ interface AdminDashboardTabProps {
   currentUserEmail?: string;
   onAdminUnlocked?: (enteredPin?: string) => void;
   onLockAdmin?: () => void;
+  isUnlocked?: boolean;
 }
 
 export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ 
   onOpenStoreModal, 
   currentUserEmail,
   onAdminUnlocked,
-  onLockAdmin
+  onLockAdmin,
+  isUnlocked
 }) => {
   const loggedInUser = loadUser();
   const effectiveEmail = currentUserEmail || loggedInUser?.email || '';
@@ -92,9 +96,19 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
   // Authorized Admin PIN - strictly 10111 only, no other pins allowed
   const ADMIN_PIN = '10111';
   const [pinInput, setPinInput] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(isRememberedUnlock);
+  const [isAuthenticated, setIsAuthenticated] = useState(isUnlocked !== undefined ? isUnlocked : isRememberedUnlock);
   const [pinError, setPinError] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
+
+  // Synchronize external lock state
+  useEffect(() => {
+    if (isUnlocked !== undefined) {
+      setIsAuthenticated(isUnlocked);
+      if (!isUnlocked) {
+        setPinInput('');
+      }
+    }
+  }, [isUnlocked]);
 
   // Diagnostics & Daily Report State
   const [diagnosticsReport, setDiagnosticsReport] = useState<DiagnosticsReport | null>(null);
@@ -279,6 +293,25 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       showToast('❌ Failed to return free subscriptions to trial.');
     } finally {
       setIsReturningToTrial(false);
+    }
+  };
+
+  const [isBroadcastingReminder, setIsBroadcastingReminder] = useState(false);
+
+  // 1-Click Broadcast Friendly Payment & Proof Reminder
+  const handleBroadcastReminder = async () => {
+    setIsBroadcastingReminder(true);
+    try {
+      const res = await broadcastPaymentReminder();
+      if (res.success) {
+        showToast(`📢 ${res.message}`);
+        loadSubscribersFromBackend();
+        loadDailyReportFromBackend();
+      }
+    } catch (err) {
+      showToast('❌ Failed to broadcast reminders to learners.');
+    } finally {
+      setIsBroadcastingReminder(false);
     }
   };
 
@@ -654,6 +687,17 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
             <span>{isLoadingBackend ? 'Syncing...' : 'Sync Backend'}</span>
           </button>
 
+          {/* 1-Click Button to Notify All Users: Friendly Reminder to Make Payment & Send Proof */}
+          <button
+            onClick={handleBroadcastReminder}
+            disabled={isBroadcastingReminder}
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50 border border-amber-300/40"
+            title="1-Click: Notify all users with active or expiring trials to make payment and send proof"
+          >
+            <Bell className={`w-3.5 h-3.5 text-amber-200 ${isBroadcastingReminder ? 'animate-bounce' : ''}`} />
+            <span>{isBroadcastingReminder ? 'Dispatching Reminders…' : 'Notify All Users (Payment Reminder)'}</span>
+          </button>
+
           <div
             className="px-3.5 py-2 bg-white/10 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 border border-white/20"
             title="Administrator Session Active"
@@ -665,13 +709,18 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
           <button
             onClick={() => {
               localStorage.removeItem('studyhub_admin_unlocked');
+              localStorage.removeItem('studyhub_admin_pin');
               setIsAuthenticated(false);
               setPinInput('');
-              if (onLockAdmin) onLockAdmin();
+              if (onLockAdmin) {
+                onLockAdmin();
+              }
             }}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl transition-all cursor-pointer border border-white/20"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition-all cursor-pointer border border-amber-400/50 flex items-center gap-1.5 shadow-sm active:scale-95"
+            title="Lock Administrator Workspace"
           >
-            Lock Admin
+            <Lock className="w-3.5 h-3.5 text-amber-200" />
+            <span>Lock Admin</span>
           </button>
         </div>
       </div>
@@ -1170,6 +1219,16 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>{isReturningToTrial ? 'Returning to Trial…' : 'Return All Free Pro to Trial Period'}</span>
+              </button>
+
+              <button
+                onClick={handleBroadcastReminder}
+                disabled={isBroadcastingReminder}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-extrabold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50 border border-indigo-400/40"
+                title="1-Click: Send friendly reminder to all users to submit payment and send proof"
+              >
+                <Bell className={`w-3.5 h-3.5 text-amber-300 ${isBroadcastingReminder ? 'animate-bounce' : ''}`} />
+                <span>{isBroadcastingReminder ? 'Dispatching Reminders…' : '1-Click: Notify All Users (Payment & Proof Reminder)'}</span>
               </button>
             </div>
           </div>

@@ -167,6 +167,22 @@ export async function returnAllFreeSubscriptionsToTrial(): Promise<{
   return res.json();
 }
 
+export async function broadcastPaymentReminder(): Promise<{
+  success: boolean;
+  notifiedCount: number;
+  message: string;
+  targetSummary?: { zarCount: number; intlCount: number };
+}> {
+  const res = await fetch('/api/admin/broadcast-reminder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to send broadcast reminder');
+  }
+  return res.json();
+}
+
 export async function fetchDailyReport(): Promise<{ success: boolean; dailyReport: DailySecurityReportData }> {
   const res = await fetch('/api/admin/daily-report');
   if (!res.ok) {

@@ -53,7 +53,7 @@ import { VoiceNarrationController } from './components/VoiceNarrationController'
 import { FloatingStudyTools } from './components/FloatingStudyTools';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
-import { Shield } from 'lucide-react';
+import { Shield, Bell, Lock } from 'lucide-react';
 
 import { AddSubjectModal } from './components/Modals/AddSubjectModal';
 import { GeneratePlanModal } from './components/Modals/GeneratePlanModal';
@@ -80,8 +80,8 @@ export default function App() {
   // Subscription state (7-day free trial + monthly plan + Fire OS compatibility)
   const [subscription, setSubscription] = useState<SubscriptionState>(() =>
     loadFromStorage('studyhub_subscription', {
-      status: 'free',
-      planName: 'Free Standard Plan',
+      status: 'trial',
+      planName: '7-Day Free Trial (All Features)',
       priceMonthly: 0,
       currency: 'USD',
       isFireOSCompatible: true,
@@ -131,18 +131,30 @@ export default function App() {
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState<boolean>(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
   const [isAdminUnlockOpen, setIsAdminUnlockOpen] = useState<boolean>(false);
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => isAdminAuthenticated());
 
   const handleLockAdmin = () => {
     lockAdminSession();
-    if (user?.email && isAdminEmail(user.email)) {
+    setIsAdminUnlocked(false);
+    try {
+      localStorage.removeItem('studyhub_admin_unlocked');
+      localStorage.removeItem('studyhub_admin_pin');
+    } catch {}
+
+    if (user?.isAdmin || (user?.email && isAdminEmail(user.email))) {
       logoutUser();
       setUser(null);
     } else {
       setUser(loadUser());
     }
+
     if (activeTab === 'admin') {
       setActiveTab('notes');
     }
+
+    setToastTitle('🔒 Administrator Session Locked');
+    setToastMessage('Admin workspace is locked. Re-entry requires the confidential 5-digit PIN (10111).');
+    setIsToastOpen(true);
   };
 
   const handleLoggedIn = (u: UserAccount) => {
@@ -151,7 +163,7 @@ export default function App() {
   };
 
   const trialDays = daysLeftInTrial(subscription);
-  const isAdmin = Boolean(user?.isAdmin) || isAdminEmail(user?.email || '') || isAdminAuthenticated();
+  const isAdmin = Boolean(user?.isAdmin) || isAdminEmail(user?.email || '') || isAdminUnlocked;
   const canAccessCurrentTab = isFeatureAccessible(activeTab, subscription, isAdmin);
 
   // Authoritative Backend Subscription Check: Prevent local storage tampering & revoke unpaid Pro
@@ -364,7 +376,8 @@ export default function App() {
     setFlashcards((prev) =>
       prev.map((c) => {
         if (c.id === cardId) {
-          return calculateSpacedRepetition(c, rating);
+          const update = calculateSpacedRepetition(c, rating);
+          return { ...c, ...update };
         }
         return c;
       })
@@ -441,6 +454,7 @@ export default function App() {
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         subscription={subscription}
         isAdmin={isAdmin}
+        isAdminUnlocked={isAdminUnlocked}
         onOpenAdminUnlock={() => setIsAdminUnlockOpen(true)}
         onLockAdmin={handleLockAdmin}
       />
@@ -455,6 +469,36 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-12">
+        {/* Friendly Payment & Proof Reminder Banner for Learners with Active/Expiring Trials */}
+        {!isAdmin && (subscription.status === 'trial' || subscription.status === 'expired' || subscription.status === 'free') && (
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 pb-1">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-300 dark:border-amber-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+              <div className="flex items-start sm:items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Bell className="w-4 h-4 animate-bounce" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <span>Friendly Payment Reminder / Vriendelike Herinnering</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-extrabold border border-amber-300 dark:border-amber-700">
+                      {subscription.status === 'expired' ? 'Trial Expired' : `${trialDays} Days Left`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                    Your trial is active or expiring soon! To keep uninterrupted access to all past exam memos &amp; AI summaries, please make your monthly payment (Capitec EFT R89 or PayPal/Card $4.99) and send proof of payment to <strong className="text-amber-700 dark:text-amber-400">charltommie18@gmail.com</strong>.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSubscriptionOpen(true)}
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-700 hover:to-indigo-700 text-white font-bold rounded-xl shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all text-xs"
+              >
+                Make Payment / Send Proof
+              </button>
+            </div>
+          </div>
+        )}
+
         {!canAccessCurrentTab ? (
           <ProFeatureGateCard
             tab={activeTab}
@@ -586,7 +630,6 @@ export default function App() {
             {activeTab === 'planner' && (
               <StudyPlannerTab
                 subjects={subjects}
-                currentSubjectName={currentSubject?.name || 'General Study'}
               />
             )}
 
@@ -608,13 +651,17 @@ export default function App() {
               <AdminDashboardTab 
                 onOpenStoreModal={() => setIsStoreModalOpen(true)}
                 currentUserEmail={user?.email || 'charltommie18@gmail.com'}
+                isUnlocked={isAdminUnlocked}
                 onLockAdmin={handleLockAdmin}
                 onAdminUnlocked={(pin) => {
                   try {
                     if (pin) {
                       const adminUser = loginWithAdminPin(pin);
                       setUser(adminUser);
+                      setIsAdminUnlocked(true);
                       setSubscription(subscriptionForUser(adminUser.email));
+                    } else {
+                      setIsAdminUnlocked(true);
                     }
                   } catch {}
                 }}
@@ -662,6 +709,7 @@ export default function App() {
         isOpen={isWhatsAppOpen}
         onClose={() => setIsWhatsAppOpen(false)}
         subjects={subjects}
+        selectedSubjectId={selectedSubjectId}
         notes={notes}
         flashcards={flashcards}
       />
@@ -680,7 +728,7 @@ export default function App() {
           saveToStorage('studyhub_subscription', newSub);
         }}
         userEmail={user?.email || ''}
-        userName={user?.name || ''}
+        userName={user?.displayName || ''}
         onOpenPolicy={(tab) => {
           setPolicyDefaultTab(tab);
           setIsPolicyOpen(true);
@@ -732,8 +780,12 @@ export default function App() {
           try {
             const adminUser = loginWithAdminPin(pin);
             setUser(adminUser);
+            setIsAdminUnlocked(true);
             setSubscription(subscriptionForUser(adminUser.email));
             setActiveTab('admin');
+            setToastTitle('🔓 Administrator Unlocked');
+            setToastMessage('Welcome back, Charl Tommie. Full Admin Portal access unlocked.');
+            setIsToastOpen(true);
           } catch (e) {
             console.error(e);
           }

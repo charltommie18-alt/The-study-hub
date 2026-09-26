@@ -179,7 +179,7 @@ export interface SubscriberRecord {
   trialEndDate?: string;
   trialStatus: 'trial' | 'active' | 'expired';
   paymentDueDate?: string;
-  paymentStatus: 'Paid Pro' | 'Active Trial ($0)' | 'Pending Payment (Trial Expired)' | 'Overdue';
+  paymentStatus: 'Paid Pro' | 'Active Trial ($0)' | 'Pending Payment (Trial Expired)' | 'Overdue' | 'Reminder Sent (Trial Expired - Send Proof)' | 'Reminder Sent (Trial Active - Send Proof)';
   paymentMethod?: string;
   lastPaymentAmount?: number;
   accessLevel: 'Basic (Trial)' | 'Full Pro Unlocked' | 'Access Suspended';
@@ -244,7 +244,7 @@ export interface Flashcard {
 }
 
 export interface SubscriptionState {
-  status: 'trial' | 'active' | 'expired' | 'pending_verification';
+  status: 'trial' | 'active' | 'expired' | 'pending_verification' | 'free';
   trialStartDate?: string;
   trialEndDate?: string;
   planName: string;

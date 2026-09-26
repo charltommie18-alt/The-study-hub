@@ -53,13 +53,14 @@ export const GeneratePlanModal: React.FC<GeneratePlanModalProps> = ({
       setGeneratedPlan(data);
     } catch (err: any) {
       console.warn('API error or offline mode, fallback to Offline AI Engine:', err);
+      const subjName = currentSubject?.name || 'General Exam';
       const offlinePlan = generateOfflineStudyPlan(
-        currentSubject?.name || 'General Exam',
+        subjName,
         days,
         hoursPerDay,
         topicsInput
       );
-      setGeneratedPlan(offlinePlan);
+      setGeneratedPlan({ subject: subjName, ...offlinePlan });
     } finally {
       setIsLoading(false);
     }

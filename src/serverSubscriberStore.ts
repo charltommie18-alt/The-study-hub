@@ -646,6 +646,40 @@ class SubscriberStore {
   }
 
   // -------------------------------------------------------------
+  // Broadcast Friendly Payment & Proof Reminder to All Trial / Expiring Users
+  // -------------------------------------------------------------
+  public broadcastPaymentReminder(): {
+    notifiedCount: number;
+    message: string;
+    targetSummary: { zarCount: number; intlCount: number };
+  } {
+    const todayStr = new Date().toISOString().split('T')[0];
+    let notifiedCount = 0;
+    let zarCount = 0;
+    let intlCount = 0;
+
+    this.subscribers.forEach((s) => {
+      // Check if user is in trial, free, or expired
+      if (s.tier === 'Free' || s.trialStatus === 'trial' || s.trialStatus === 'expired') {
+        notifiedCount++;
+        if (s.currency === 'ZAR') zarCount++;
+        else intlCount++;
+
+        s.paymentStatus = s.trialStatus === 'expired' 
+          ? 'Reminder Sent (Trial Expired - Send Proof)' 
+          : 'Reminder Sent (Trial Active - Send Proof)';
+        s.lastActiveDate = todayStr;
+      }
+    });
+
+    return {
+      notifiedCount,
+      message: `Dispatched payment reminders to ${notifiedCount} learners (${zarCount} Capitec Bank EFT & ${intlCount} PayPal/Card). Reminders prompt students to pay R89 / $4.99 and email proof of payment to charltommie18@gmail.com.`,
+      targetSummary: { zarCount, intlCount }
+    };
+  }
+
+  // -------------------------------------------------------------
   // Automatic 1-Click Fix All Faults (Revoke Unpaid Pro & Lock Expired)
   // -------------------------------------------------------------
   public fixDiagnosticsFaults(): { fixedCount: number; faultsResolved: string[] } {

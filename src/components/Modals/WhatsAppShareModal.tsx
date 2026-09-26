@@ -47,10 +47,12 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
     if (activeShareTab === 'note' && subjectNotes.length > 0) {
       const note = subjectNotes[0];
+      const takeaways = Array.isArray(note.keyTakeaways) ? note.keyTakeaways : [];
+      const summaryText = typeof note.summary === 'string' ? note.summary : '';
       return `📚 *StudyHub Note Summary - ${currentSubject.name}*\n\n` +
         `*${note.title}*\n\n` +
-        `*Key Takeaways:*\n${note.summary.keyTakeaways.map((k) => `• ${k}`).join('\n')}\n\n` +
-        `*Summary Overview:*\n${note.summary.overview}\n\n` +
+        (takeaways.length > 0 ? `*Key Takeaways:*\n${takeaways.map((k) => `• ${k}`).join('\n')}\n\n` : '') +
+        (summaryText ? `*Summary Overview:*\n${summaryText}\n\n` : '') +
         `⚡ _Studied on The Study Hub AI Workspace_`;
     }
 
@@ -68,9 +70,10 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
     }
 
     if (activeShareTab === 'quiz' && latestQuizResult) {
+      const correctEstimate = Math.round((latestQuizResult.score / 100) * latestQuizResult.totalQuestions);
       return `🏆 *StudyHub Practice Test Score Challenge!*\n\n` +
         `Subject: *${currentSubject.name}*\n` +
-        `Score: *${latestQuizResult.score}%* (${latestQuizResult.correctAnswers}/${latestQuizResult.totalQuestions} Correct)\n\n` +
+        `Score: *${latestQuizResult.score}%* (${correctEstimate}/${latestQuizResult.totalQuestions} Correct)\n\n` +
         `Can you beat my test score? Join my study group on StudyHub! 🚀`;
     }
 

@@ -36,10 +36,9 @@ const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
 app.use((req, res, next) => {
   firewallStats.inspectedRequests++;
 
-  // Set HTTP Security Headers
+  // Set HTTP Security Headers (Allow iframe preview in AI Studio)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-StudyHub-Firewall', 'Active-v2.5-Protected');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
@@ -273,6 +272,16 @@ app.post('/api/admin/return-free-to-trial', (req, res) => {
     const result = backendStore.returnAllFreeToTrial();
     const updatedReport = backendStore.runDiagnostics();
     res.json({ success: true, ...result, updatedReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 11c. Broadcast Friendly Payment & Proof Reminder to All Trial Users
+app.post('/api/admin/broadcast-reminder', (req, res) => {
+  try {
+    const result = backendStore.broadcastPaymentReminder();
+    res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
