@@ -54,6 +54,7 @@ import {
   resetBackendPin,
   fetchDiagnostics,
   fixDiagnosticsFaults,
+  returnAllFreeSubscriptionsToTrial,
   fetchDailyReport
 } from '../../utils/subscriptionApi';
 import { PaymentAuditRecord } from '../../serverSubscriberStore';
@@ -257,6 +258,27 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       showToast('❌ Failed to fix diagnostic faults.');
     } finally {
       setIsFixingFaults(false);
+    }
+  };
+
+  const [isReturningToTrial, setIsReturningToTrial] = useState(false);
+
+  // Return All Free Pro Subscriptions to Trial Period
+  const handleReturnFreeToTrial = async () => {
+    setIsReturningToTrial(true);
+    try {
+      const res = await returnAllFreeSubscriptionsToTrial();
+      if (res.success) {
+        setDiagnosticsReport(res.updatedReport);
+        showToast(`🔒 ${res.message}`);
+        loadSubscribersFromBackend();
+        loadPaymentQueueFromBackend();
+        loadDailyReportFromBackend();
+      }
+    } catch (err) {
+      showToast('❌ Failed to return free subscriptions to trial.');
+    } finally {
+      setIsReturningToTrial(false);
     }
   };
 
@@ -1138,7 +1160,16 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span>{isFixingFaults ? 'Auto-Fixing Faults…' : 'Auto-Fix All Faults (Revoke Unpaid Pro)'}</span>
+                <span>{isFixingFaults ? 'Auto-Fixing Faults…' : 'Auto-Fix All Faults'}</span>
+              </button>
+
+              <button
+                onClick={handleReturnFreeToTrial}
+                disabled={isReturningToTrial}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>{isReturningToTrial ? 'Returning to Trial…' : 'Return All Free Pro to Trial Period'}</span>
               </button>
             </div>
           </div>

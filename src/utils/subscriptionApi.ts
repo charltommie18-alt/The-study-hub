@@ -151,6 +151,22 @@ export async function fixDiagnosticsFaults(): Promise<{
   return res.json();
 }
 
+export async function returnAllFreeSubscriptionsToTrial(): Promise<{
+  success: boolean;
+  downgradedCount: number;
+  message: string;
+  updatedReport: DiagnosticsReport;
+}> {
+  const res = await fetch('/api/admin/return-free-to-trial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to return free subscriptions to trial');
+  }
+  return res.json();
+}
+
 export async function fetchDailyReport(): Promise<{ success: boolean; dailyReport: DailySecurityReportData }> {
   const res = await fetch('/api/admin/daily-report');
   if (!res.ok) {

@@ -102,8 +102,28 @@ export function subscriptionForUser(email: string, existing?: SubscriptionState 
   }
 
   const now = new Date();
-  // Already active (paid Pro)
+  // Already active: verify they are not an unverified free Pro user
   if (existing && existing.status === 'active') {
+    const isUnverifiedFreePro = !existing.amountPaid || existing.amountPaid <= 0 || !existing.transactionId || existing.transactionId.startsWith('ADM-');
+    if (isUnverifiedFreePro) {
+      // Strictly return unverified free Pro back to 7-day trial
+      const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const returnedSub: SubscriptionState = {
+        status: 'trial',
+        trialStartDate: existing.trialStartDate || now.toISOString(),
+        trialEndDate: existing.trialEndDate || trialEnd.toISOString(),
+        planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
+        priceMonthly: 4.99,
+        currency: existing.currency || 'USD',
+        isFireOSCompatible: true,
+        autoRenew: false,
+        paymentMethod: '7-Day Free Trial ($0.00 today)',
+        nextPaymentDue: existing.trialEndDate || trialEnd.toISOString(),
+        amountPaid: 0,
+      };
+      saveToStorage(SUB_KEY, returnedSub);
+      return returnedSub;
+    }
     return existing;
   }
 
@@ -357,4 +377,59 @@ export function daysLeftInTrial(sub: SubscriptionState): number | null {
   const ms = new Date(sub.trialEndDate).getTime() - Date.now();
   if (ms <= 0) return 0;
   return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * Automatically audits stored local subscription and downgrades any unearned free Pro to trial
+ */
+export function enforceZeroFreeProPolicy(): void {
+  try {
+    const user = loadUser();
+    if (user && isAdminEmail(user.email)) return;
+
+    const sub = loadFromStorage<SubscriptionState | null>(SUB_KEY, null);
+    if (!sub) return;
+
+    if (sub.status === 'active') {
+      const isUnverified = !sub.amountPaid || sub.amountPaid <= 0 || !sub.transactionId || sub.transactionId.startsWith('ADM-');
+      if (isUnverified) {
+        const now = new Date();
+        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const returnedSub: SubscriptionState = {
+          ...sub,
+          status: 'trial',
+          planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
+          priceMonthly: 4.99,
+          autoRenew: false,
+          paymentMethod: '7-Day Free Trial ($0.00 today)',
+          nextPaymentDue: trialEnd.toISOString(),
+          amountPaid: 0,
+        };
+        saveToStorage(SUB_KEY, returnedSub);
+      }
+    }
+
+    // Also sanitize any local demo subscribers
+    const localSubsRaw = localStorage.getItem('studyhub_admin_subscribers');
+    if (localSubsRaw) {
+      const parsed = JSON.parse(localSubsRaw);
+      if (Array.isArray(parsed)) {
+        let changed = false;
+        parsed.forEach((s: any) => {
+          if (s.tier === 'Pro' || s.accessLevel === 'Full Pro Unlocked' || s.trialStatus === 'active') {
+            s.tier = 'Free';
+            s.trialStatus = 'trial';
+            s.accessLevel = 'Basic (Trial)';
+            s.paymentStatus = 'Active Trial ($0)';
+            s.amount = 0;
+            s.lastPaymentAmount = 0;
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem('studyhub_admin_subscribers', JSON.stringify(parsed));
+        }
+      }
+    }
+  } catch {}
 }

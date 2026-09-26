@@ -267,6 +267,17 @@ app.post('/api/admin/diagnostics/fix', (req, res) => {
   }
 });
 
+// 11b. Return All Free Pro Subscriptions to Trial Period
+app.post('/api/admin/return-free-to-trial', (req, res) => {
+  try {
+    const result = backendStore.returnAllFreeToTrial();
+    const updatedReport = backendStore.runDiagnostics();
+    res.json({ success: true, ...result, updatedReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 12. Official Daily Security & Platform Audit Report for Charl Tommie
 app.get('/api/admin/daily-report', (req, res) => {
   try {

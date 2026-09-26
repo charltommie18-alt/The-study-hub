@@ -52,42 +52,42 @@ function generateSeedSubscribers(): SubscriberRecord[] {
       fullName: 'Sophia Martinez',
       email: 'sophia.m@student.edu',
       gradeLevel: 'grade-12',
-      tier: 'Pro',
+      tier: 'Free',
       currency: 'USD',
-      amount: 4.99,
+      amount: 0,
       status: 'Active',
-      joinedDate: '2026-08-22',
-      lastActiveDate: '2026-09-22',
+      joinedDate: '2026-09-20',
+      lastActiveDate: '2026-09-26',
       docsUploaded: 24,
-      trialStartDate: '2026-08-22',
-      trialEndDate: '2026-08-29',
-      trialStatus: 'active',
-      paymentDueDate: '2026-09-22',
-      paymentStatus: 'Paid Pro',
-      paymentMethod: 'PayPal Hosted Checkout (Ct Fun URJZ4DJH4RKHQ)',
-      lastPaymentAmount: 4.99,
-      accessLevel: 'Full Pro Unlocked',
+      trialStartDate: '2026-09-20',
+      trialEndDate: '2026-09-27',
+      trialStatus: 'trial',
+      paymentDueDate: '2026-09-27',
+      paymentStatus: 'Active Trial ($0)',
+      paymentMethod: '7-Day Free Trial (Basic Access)',
+      lastPaymentAmount: 0.00,
+      accessLevel: 'Basic (Trial)',
     },
     {
       id: 'sub-102',
       fullName: 'Kagiso Dlamini',
       email: 'kagiso.d@school.za',
       gradeLevel: 'grade-11',
-      tier: 'Pro',
+      tier: 'Free',
       currency: 'ZAR',
-      amount: 89.00,
+      amount: 0,
       status: 'Active',
-      joinedDate: '2026-08-27',
-      lastActiveDate: '2026-09-22',
+      joinedDate: '2026-09-21',
+      lastActiveDate: '2026-09-26',
       docsUploaded: 16,
-      trialStartDate: '2026-08-27',
-      trialEndDate: '2026-09-03',
-      trialStatus: 'active',
-      paymentDueDate: '2026-09-27',
-      paymentStatus: 'Paid Pro',
-      paymentMethod: 'Capitec EFT (Ref: CAP-2026-KD89, Acc: 2557334258)',
-      lastPaymentAmount: 89.00,
-      accessLevel: 'Full Pro Unlocked',
+      trialStartDate: '2026-09-21',
+      trialEndDate: '2026-09-28',
+      trialStatus: 'trial',
+      paymentDueDate: '2026-09-28',
+      paymentStatus: 'Active Trial ($0)',
+      paymentMethod: '7-Day Free Trial (Basic Access)',
+      lastPaymentAmount: 0.00,
+      accessLevel: 'Basic (Trial)',
     },
     {
       id: 'sub-103',
@@ -115,21 +115,21 @@ function generateSeedSubscribers(): SubscriberRecord[] {
       fullName: 'Tariq Al-Mansoor',
       email: 'tariq.a@college.org',
       gradeLevel: 'tertiary',
-      tier: 'Institutional',
+      tier: 'Free',
       currency: 'EUR',
-      amount: 14.99,
+      amount: 0,
       status: 'Active',
-      joinedDate: '2026-07-10',
-      lastActiveDate: '2026-09-22',
+      joinedDate: '2026-09-22',
+      lastActiveDate: '2026-09-26',
       docsUploaded: 42,
-      trialStartDate: '2026-07-10',
-      trialEndDate: '2026-07-17',
-      trialStatus: 'active',
-      paymentDueDate: '2026-10-10',
-      paymentStatus: 'Paid Pro',
-      paymentMethod: 'PayPal International (Invoice Ct Fun)',
-      lastPaymentAmount: 14.99,
-      accessLevel: 'Full Pro Unlocked',
+      trialStartDate: '2026-09-22',
+      trialEndDate: '2026-09-29',
+      trialStatus: 'trial',
+      paymentDueDate: '2026-09-29',
+      paymentStatus: 'Active Trial ($0)',
+      paymentMethod: '7-Day Free Trial (Basic Access)',
+      lastPaymentAmount: 0.00,
+      accessLevel: 'Basic (Trial)',
     },
     {
       id: 'sub-105',
@@ -197,23 +197,21 @@ function generateSeedSubscribers(): SubscriberRecord[] {
   );
 
   // Target Breakdown to reach 812 total registered accounts:
-  // Active Paid Pro: 215 total
-  // Active 7-Day Trials: 482 total
+  // Active Paid Pro: 0 (All unverified accounts returned to trial)
+  // Active 7-Day Trials: 697 total
   // Expired / Pending: 115 total
-  // Sum = 215 + 482 + 115 = 812 accounts (Matches the dashboard DAU exactly)
+  // Sum = 697 + 115 = 812 accounts (Zero free Pro access guaranteed)
 
-  const currentPaid = list.filter((s) => s.trialStatus === 'active').length; // 3
-  const currentTrial = list.filter((s) => s.trialStatus === 'trial').length; // 1
-  const currentExpired = list.filter((s) => s.trialStatus === 'expired').length; // 3
+  const currentTrial = list.filter((s) => s.trialStatus === 'trial').length;
+  const currentExpired = list.filter((s) => s.trialStatus === 'expired').length;
 
-  const targetPaid = 215;
-  const targetTrial = 482;
+  const targetTrial = 697;
   const targetExpired = 115;
 
   let counter = 108;
 
-  // 1. Generate remaining Paid Pro accounts
-  for (let i = currentPaid; i < targetPaid; i++) {
+  // 1. Generate active 7-day trial accounts (697 total, zero free Pro)
+  for (let i = currentTrial; i < targetTrial; i++) {
     const fn = FIRST_NAMES[i % FIRST_NAMES.length];
     const ln = LAST_NAMES[(i * 3 + 1) % LAST_NAMES.length];
     const grade = GRADES[i % GRADES.length];
@@ -224,87 +222,47 @@ function generateSeedSubscribers(): SubscriberRecord[] {
 
     let currency: CurrencyCode = 'USD';
     let amount = 4.99;
-    let method = 'PayPal Hosted Checkout (Ct Fun URJZ4DJH4RKHQ)';
+    let method = '7-Day Free Trial (Basic Access)';
 
     if (isZar) {
       currency = 'ZAR';
       amount = 89.00;
-      method = `Capitec Bank EFT (Acc: 2557334258, Ref: CAP-${counter})`;
+      method = '7-Day Free Trial (Capitec EFT Gate)';
     } else if (isEur) {
       currency = 'EUR';
       amount = 4.99;
-      method = 'PayPal Checkout (EUR card)';
+      method = '7-Day Free Trial (PayPal EUR Gate)';
     } else if (isGbp) {
       currency = 'GBP';
       amount = 3.99;
-      method = 'PayPal UK Card';
+      method = '7-Day Free Trial (PayPal UK Gate)';
     } else if (isJmd) {
       currency = 'JMD';
       amount = 750.00;
-      method = 'PayPal International';
+      method = '7-Day Free Trial (PayPal JMD Gate)';
     }
 
-    const dueDay = String(Math.floor((i % 28) + 1)).padStart(2, '0');
+    const trialStartDate = '2026-09-20';
+    const trialEndDate = '2026-09-27';
 
     list.push({
       id: `sub-${counter++}`,
       fullName: `${fn} ${ln}`,
       email: `${fn.toLowerCase()}.${ln.toLowerCase().replace(/[^a-z]/g, '')}${i}@studenthub.app`,
       gradeLevel: grade,
-      tier: 'Pro',
-      currency,
-      amount,
-      status: 'Active',
-      joinedDate: '2026-08-15',
-      lastActiveDate: '2026-09-22',
-      docsUploaded: 5 + (i % 25),
-      trialStartDate: '2026-08-15',
-      trialEndDate: '2026-08-22',
-      trialStatus: 'active',
-      paymentDueDate: `2026-10-${dueDay}`,
-      paymentStatus: 'Paid Pro',
-      paymentMethod: method,
-      lastPaymentAmount: amount,
-      accessLevel: 'Full Pro Unlocked',
-    });
-  }
-
-  // 2. Generate remaining Active Trial accounts
-  for (let i = currentTrial; i < targetTrial; i++) {
-    const fn = FIRST_NAMES[(i + 5) % FIRST_NAMES.length];
-    const ln = LAST_NAMES[(i * 2 + 7) % LAST_NAMES.length];
-    const grade = GRADES[(i + 2) % GRADES.length];
-    const isZar = i % 3 === 0;
-
-    const currency: CurrencyCode = isZar ? 'ZAR' : 'USD';
-    const amount = isZar ? 89.00 : 4.99;
-
-    // Trial day offset 0 to 6
-    const trialDayOffset = i % 7;
-    const startDay = 22 - (6 - trialDayOffset);
-    const endDay = startDay + 7;
-
-    const trialStartDate = `2026-09-${String(Math.max(15, startDay)).padStart(2, '0')}`;
-    const trialEndDate = `2026-09-${String(Math.min(30, endDay)).padStart(2, '0')}`;
-
-    list.push({
-      id: `sub-${counter++}`,
-      fullName: `${fn} ${ln}`,
-      email: `${fn.toLowerCase()}.${ln.toLowerCase().replace(/[^a-z]/g, '')}${i}@studymail.org`,
-      gradeLevel: grade,
       tier: 'Free',
       currency,
-      amount,
+      amount: 0,
       status: 'Active',
       joinedDate: trialStartDate,
-      lastActiveDate: '2026-09-22',
-      docsUploaded: 1 + (i % 9),
+      lastActiveDate: '2026-09-26',
+      docsUploaded: 5 + (i % 25),
       trialStartDate,
       trialEndDate,
       trialStatus: 'trial',
       paymentDueDate: trialEndDate,
       paymentStatus: 'Active Trial ($0)',
-      paymentMethod: '7-Day Trial (Basic Access)',
+      paymentMethod: method,
       lastPaymentAmount: 0.00,
       accessLevel: 'Basic (Trial)',
     });
@@ -350,7 +308,7 @@ function generateSeedSubscribers(): SubscriberRecord[] {
   return list.map(s => ({ ...s, isDemo: true }));
 }
 
-// Initial Payment Audit Queue (Incoming real-time payments - flagged as demo test data)
+// Initial Payment Audit Queue (All pending verification until admin confirms bank deposit)
 const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
   {
     id: 'PAY-1001',
@@ -360,11 +318,10 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     amount: 89.00,
     currency: 'ZAR',
     reference: 'CAP-2026-KD89',
-    status: 'settled',
-    submittedAt: '2026-08-27T10:14:00Z',
-    settledAt: '2026-08-27T10:30:00Z',
-    notes: 'Sample test record for Capitec Bank Acc 2557334258',
-    isDemo: true,
+    status: 'pending_verification',
+    submittedAt: '2026-09-21T10:14:00Z',
+    notes: 'Awaiting Capitec Bank Acc 2557334258 verification.',
+    isDemo: false,
   },
   {
     id: 'PAY-1002',
@@ -374,11 +331,10 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     amount: 4.99,
     currency: 'USD',
     reference: 'PP-9X48123',
-    status: 'settled',
-    submittedAt: '2026-08-22T14:20:00Z',
-    settledAt: '2026-08-22T14:21:00Z',
-    notes: 'Sample test record for PayPal merchant (URJZ4DJH4RKHQ)',
-    isDemo: true,
+    status: 'pending_verification',
+    submittedAt: '2026-09-22T14:20:00Z',
+    notes: 'Awaiting PayPal merchant balance (URJZ4DJH4RKHQ) verification.',
+    isDemo: false,
   },
   {
     id: 'PAY-1003',
@@ -388,11 +344,10 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     amount: 14.99,
     currency: 'EUR',
     reference: 'PP-EUR-9901',
-    status: 'settled',
-    submittedAt: '2026-07-10T09:00:00Z',
-    settledAt: '2026-07-10T09:05:00Z',
-    notes: 'Sample institutional billing test scenario',
-    isDemo: true,
+    status: 'pending_verification',
+    submittedAt: '2026-09-20T09:00:00Z',
+    notes: 'Awaiting international PayPal clearance verification.',
+    isDemo: false,
   },
   {
     id: 'PAY-1004',
@@ -404,8 +359,8 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     reference: 'EFT-SN-99',
     status: 'pending_verification',
     submittedAt: '2026-09-21T16:45:00Z',
-    notes: 'Sample EFT proof test scenario for Capitec Bank Acc 2557334258.',
-    isDemo: true,
+    notes: 'Sample EFT proof for Capitec Bank Acc 2557334258.',
+    isDemo: false,
   },
   {
     id: 'PAY-1005',
@@ -418,7 +373,7 @@ const INITIAL_PAYMENT_AUDIT: PaymentAuditRecord[] = [
     status: 'pending_verification',
     submittedAt: '2026-09-22T11:10:00Z',
     notes: 'Sample PayPal checkout test scenario.',
-    isDemo: true,
+    isDemo: false,
   }
 ];
 
@@ -426,6 +381,10 @@ class SubscriberStore {
   private subscribers: SubscriberRecord[] = generateSeedSubscribers();
   private paymentAuditQueue: PaymentAuditRecord[] = [...INITIAL_PAYMENT_AUDIT];
   private adminPin: string = '10111';
+
+  constructor() {
+    this.returnAllFreeToTrial();
+  }
 
   // Retrieve metrics
   public getMetrics() {
@@ -639,6 +598,50 @@ class SubscriberStore {
       summaryMessage: faults.length === 0
         ? 'All subscription locks, trials, and payment gateways are 100% verified. No unpaid users have full Pro access.'
         : `Diagnostic scan detected ${faults.length} issues: ${unpaidProAccounts.length} unpaid users with Pro access, ${expiredUncaught.length} expired trials requiring suspension.`,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // Return All Free Pro Accounts to 7-Day Basic Trial Period
+  // -------------------------------------------------------------
+  public returnAllFreeToTrial(): { downgradedCount: number; message: string } {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const settledEmails = new Set(
+      this.paymentAuditQueue
+        .filter((p) => p.status === 'settled' && !p.isDemo)
+        .map((p) => p.studentEmail.toLowerCase())
+    );
+
+    let downgradedCount = 0;
+
+    this.subscribers.forEach((s) => {
+      const isSettled = settledEmails.has(s.email.toLowerCase());
+      if (isSettled) return;
+
+      const hadProAccess = s.tier === 'Pro' || s.trialStatus === 'active' || s.accessLevel === 'Full Pro Unlocked';
+      if (hadProAccess) {
+        const isExpired = s.trialEndDate && s.trialEndDate < todayStr;
+        if (isExpired) {
+          s.tier = 'Free';
+          s.trialStatus = 'expired';
+          s.accessLevel = 'Access Suspended';
+          s.paymentStatus = 'Pending Payment (Trial Expired)';
+          s.status = 'Pending';
+        } else {
+          s.tier = 'Free';
+          s.trialStatus = 'trial';
+          s.accessLevel = 'Basic (Trial)';
+          s.paymentStatus = 'Active Trial ($0)';
+          s.paymentMethod = '7-Day Free Trial (Basic Access)';
+          s.status = 'Active';
+        }
+        downgradedCount++;
+      }
+    });
+
+    return {
+      downgradedCount,
+      message: `Successfully returned ${downgradedCount} unearned Pro subscriptions back to basic 7-day trial or expired lock. Zero free Pro access remains active.`
     };
   }
 

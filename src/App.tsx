@@ -25,6 +25,7 @@ import {
   isAdminAuthenticated,
   loginWithAdminPin,
   lockAdminSession,
+  enforceZeroFreeProPolicy,
   type UserAccount 
 } from './utils/auth';
 import { ProFeatureGateCard } from './components/ProFeatureGateCard';
@@ -87,6 +88,11 @@ export default function App() {
       autoRenew: false,
     })
   );
+
+  // Ensure zero unverified free Pro subscriptions: return to trial on mount
+  useEffect(() => {
+    enforceZeroFreeProPolicy();
+  }, []);
 
   // On login / app open: trial starts for normal users; admin always free
   useEffect(() => {
