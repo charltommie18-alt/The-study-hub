@@ -141,13 +141,6 @@ export default function App() {
       localStorage.removeItem('studyhub_admin_pin');
     } catch {}
 
-    if (user?.isAdmin || (user?.email && isAdminEmail(user.email))) {
-      logoutUser();
-      setUser(null);
-    } else {
-      setUser(loadUser());
-    }
-
     if (activeTab === 'admin') {
       setActiveTab('notes');
     }
@@ -630,6 +623,8 @@ export default function App() {
             {activeTab === 'planner' && (
               <StudyPlannerTab
                 subjects={subjects}
+                currentGrade={currentGrade}
+                onOpenAddSubject={() => setIsAddSubjectOpen(true)}
               />
             )}
 

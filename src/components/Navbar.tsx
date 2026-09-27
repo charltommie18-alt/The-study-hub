@@ -381,7 +381,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  if (item.id === 'admin' && !isAdminUnlocked && onOpenAdminUnlock) {
+                    onOpenAdminUnlock();
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
                 className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all cursor-pointer ${
                   isActive
                     ? isAdmin
