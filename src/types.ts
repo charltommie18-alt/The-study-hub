@@ -257,6 +257,8 @@ export interface SubscriptionState {
   nextPaymentDue?: string;
   amountPaid?: number;
   transactionId?: string;
+  isLockedOut?: boolean;
+  lockReason?: string;
 }
 
 export interface QuizQuestion {
@@ -317,7 +319,7 @@ export interface FocusSessionLog {
 
 export interface DiagnosticFault {
   id: string;
-  category: 'unpaid_pro' | 'expired_trial' | 'demo_mrr_inflation' | 'pending_unverified' | 'admin_lock';
+  category: 'unpaid_pro' | 'expired_trial' | 'demo_mrr_inflation' | 'pending_unverified' | 'admin_lock' | 'stale_unpaid_claims' | 'tracking_fault';
   severity: 'critical' | 'high' | 'medium' | 'info';
   title: string;
   description: string;

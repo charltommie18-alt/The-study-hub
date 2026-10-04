@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, UserPlus, LogIn, ShieldCheck, Sparkles, Flame, KeyRound, Shield } from 'lucide-react';
-import { loginWithEmail, loginWithAdminPin, isAdminEmail } from '../../utils/auth';
+import { Mail, UserPlus, LogIn, ShieldCheck, Sparkles, Flame, KeyRound, Shield, AlertTriangle, Lock } from 'lucide-react';
+import { loginWithEmail, loginWithAdminPin, isAdminEmail, isEmailTrialExpiredOrLocked } from '../../utils/auth';
 import type { UserAccount } from '../../utils/auth';
 
 interface LoginModalProps {
@@ -38,6 +38,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoggedIn }) =>
   };
 
   const adminHint = isAdminEmail(email);
+  const isLocked = isEmailTrialExpiredOrLocked(email);
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#2D362E]/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -135,14 +136,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoggedIn }) =>
                 </div>
               </div>
 
-              {adminHint && (
+              {isLocked ? (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200 flex gap-2">
+                  <Lock className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                  <div>
+                    <strong className="block text-rose-700 dark:text-rose-300">7-Day Free Trial Expired — Account Locked</strong>
+                    Trial reset is permanently disabled for this email. Sign in to subscribe and unlock your account.
+                  </div>
+                </div>
+              ) : adminHint ? (
                 <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-900 dark:text-emerald-200 flex gap-2">
                   <ShieldCheck className="w-4 h-4 shrink-0" />
                   Admin email detected — this account stays <strong>always free</strong> with full access.
                 </div>
-              )}
-
-              {!adminHint && (
+              ) : (
                 <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-900 dark:text-blue-200 flex gap-2">
                   <Sparkles className="w-4 h-4 shrink-0 text-blue-600" />
                   <div>
@@ -162,7 +169,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoggedIn }) =>
             disabled={busy || (mode === 'admin' && adminPin.length !== 5)}
             className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-600 text-white font-bold text-sm cursor-pointer disabled:opacity-60"
           >
-            {busy ? 'Please wait…' : mode === 'admin' ? 'Unlock as Administrator' : mode === 'signup' ? 'Create account & start free trial' : 'Sign in'}
+            {busy ? 'Please wait…' : mode === 'admin' ? 'Unlock as Administrator' : isLocked ? 'Sign in to Subscribe & Unlock' : mode === 'signup' ? 'Create account & start free trial' : 'Sign in'}
           </button>
 
           <p className="text-[10px] text-center text-[#8C857A] dark:text-[#A6C4A7]">

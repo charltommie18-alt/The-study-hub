@@ -19,6 +19,8 @@ export interface UserAccount {
 const USER_KEY = 'studyhub_user_account';
 const SUB_KEY = 'studyhub_subscription';
 const ADMIN_UNLOCKED_KEY = 'studyhub_admin_unlocked';
+const PERMANENT_LOCKOUT_KEY = 'studyhub_permanent_lockout_registry';
+const DEVICE_LOCKOUT_KEY = 'studyhub_device_trial_exhausted';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -28,6 +30,66 @@ export function isAdminEmail(email: string): boolean {
   if (!email) return false;
   const e = normalizeEmail(email);
   return ADMIN_EMAILS.includes(e);
+}
+
+/**
+ * Checks whether an account's 7-day trial has permanently expired and cannot be reset.
+ */
+export function isEmailTrialExpiredOrLocked(email: string): boolean {
+  if (!email || isAdminEmail(email)) return false;
+  const clean = normalizeEmail(email);
+
+  try {
+    const raw = localStorage.getItem(PERMANENT_LOCKOUT_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed[clean]?.locked) {
+        return true;
+      }
+    }
+  } catch {}
+
+  try {
+    const devLock = localStorage.getItem(DEVICE_LOCKOUT_KEY);
+    if (devLock && devLock === clean) {
+      return true;
+    }
+  } catch {}
+
+  return false;
+}
+
+/**
+ * Hardcodes a permanent lockout on an email so the 7-day trial can NEVER be reset.
+ */
+export function permanentlyLockTrial(email: string, reason?: string, originalEndDate?: string): void {
+  if (!email || isAdminEmail(email)) return;
+  const clean = normalizeEmail(email);
+
+  try {
+    let registry: Record<string, any> = {};
+    const raw = localStorage.getItem(PERMANENT_LOCKOUT_KEY);
+    if (raw) {
+      registry = JSON.parse(raw) || {};
+    }
+    registry[clean] = {
+      locked: true,
+      lockedAt: new Date().toISOString(),
+      reason: reason || '7-Day Free Trial period ended. Anti-reset lock active.',
+      trialEndedAt: originalEndDate || new Date().toISOString(),
+    };
+    localStorage.setItem(PERMANENT_LOCKOUT_KEY, JSON.stringify(registry));
+    localStorage.setItem(DEVICE_LOCKOUT_KEY, clean);
+  } catch {}
+
+  // Synchronize lock with backend server
+  try {
+    fetch('/api/user/lock-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: clean, reason: reason || 'Trial period expired' }),
+    }).catch(() => {});
+  } catch {}
 }
 
 export function verifyAdminPin(pin: string): boolean {
@@ -98,57 +160,92 @@ export function subscriptionForUser(email: string, existing?: SubscriptionState 
       nextPaymentDue: 'Never (Lifetime Admin)',
       amountPaid: 0,
       transactionId: 'ADM-LIFETIME-PRO',
+      isLockedOut: false,
     };
   }
 
   const now = new Date();
-  // Already active: verify they are not an unverified free Pro user
+  const cleanEmail = normalizeEmail(email);
+  const isAlreadyLocked = isEmailTrialExpiredOrLocked(cleanEmail);
+
+  // 1. Legitimate paid Pro subscriber (verified with real amountPaid and valid transactionId)
   if (existing && existing.status === 'active') {
     const isUnverifiedFreePro = !existing.amountPaid || existing.amountPaid <= 0 || !existing.transactionId || existing.transactionId.startsWith('ADM-');
-    if (isUnverifiedFreePro) {
-      // Strictly return unverified free Pro back to 7-day trial
-      const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const returnedSub: SubscriptionState = {
-        status: 'trial',
-        trialStartDate: existing.trialStartDate || now.toISOString(),
-        trialEndDate: existing.trialEndDate || trialEnd.toISOString(),
-        planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
-        priceMonthly: 4.99,
-        currency: existing.currency || 'USD',
-        isFireOSCompatible: true,
-        autoRenew: false,
-        paymentMethod: '7-Day Free Trial ($0.00 today)',
-        nextPaymentDue: existing.trialEndDate || trialEnd.toISOString(),
-        amountPaid: 0,
-      };
-      saveToStorage(SUB_KEY, returnedSub);
-      return returnedSub;
-    }
-    return existing;
-  }
-
-  // Already had trial: check if expired
-  if (existing && existing.trialEndDate) {
-    const end = new Date(existing.trialEndDate);
-    if (now > end) {
+    if (!isUnverifiedFreePro) {
       return {
         ...existing,
-        status: 'expired',
-        planName: 'Pro Tier (7-Day Trial Expired)',
-        autoRenew: false,
-        nextPaymentDue: 'Immediate (Trial Expired)',
+        isLockedOut: false,
       };
     }
+    // If unverified free Pro: check if their original trial had already ended
+    const trialEnded = isAlreadyLocked || (existing.trialEndDate && new Date(existing.trialEndDate) < now);
+    if (trialEnded) {
+      permanentlyLockTrial(cleanEmail, 'Trial expired & unverified Pro revoked', existing.trialEndDate);
+      const lockedSub: SubscriptionState = {
+        ...existing,
+        status: 'expired',
+        isLockedOut: true,
+        lockReason: 'Your 7-day free trial has expired. Trial reset is disabled. Please subscribe to unlock.',
+        planName: 'Pro Tier (7-Day Trial Expired — Account Locked)',
+        priceMonthly: 4.99,
+        autoRenew: false,
+        paymentMethod: 'Trial Expired (Subscription Required)',
+        nextPaymentDue: 'Immediate (Trial Expired)',
+        amountPaid: 0,
+      };
+      saveToStorage(SUB_KEY, lockedSub);
+      return lockedSub;
+    }
+  }
+
+  // 2. Pending verification (awaiting admin settlement)
+  if (existing && existing.status === 'pending_verification') {
     return {
       ...existing,
-      status: 'trial',
+      isLockedOut: false,
     };
   }
 
-  // New user / fresh sign-in: Automatically start 7-day free trial
+  // 3. HARDCODED LOCKOUT CHECK: If already locked in registry OR status is expired OR trialEndDate is past
+  const isExpired = isAlreadyLocked || 
+    existing?.status === 'expired' || 
+    (existing?.trialEndDate && new Date(existing.trialEndDate) < now);
+
+  if (isExpired) {
+    permanentlyLockTrial(cleanEmail, '7-Day Free Trial period ended', existing?.trialEndDate);
+    const lockedSub: SubscriptionState = {
+      status: 'expired',
+      isLockedOut: true,
+      lockReason: '7-Day Free Trial period has permanently ended. Trial reset is hardcoded locked. Active subscription required to regain access.',
+      planName: 'Pro Tier (7-Day Trial Expired — Account Locked)',
+      priceMonthly: 4.99,
+      currency: existing?.currency || 'USD',
+      isFireOSCompatible: true,
+      autoRenew: false,
+      trialStartDate: existing?.trialStartDate || new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      trialEndDate: existing?.trialEndDate || now.toISOString(),
+      paymentMethod: 'Trial Expired (Subscription Required)',
+      nextPaymentDue: 'Immediate (Account Locked)',
+      amountPaid: 0,
+    };
+    saveToStorage(SUB_KEY, lockedSub);
+    return lockedSub;
+  }
+
+  // 4. Existing active trial that hasn't expired yet: preserve their exact remaining time
+  if (existing && existing.trialEndDate && new Date(existing.trialEndDate) >= now) {
+    return {
+      ...existing,
+      status: 'trial',
+      isLockedOut: false,
+    };
+  }
+
+  // 5. Fresh user sign-in: ONLY if they have never had an expired trial
   const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  return {
+  const newTrialSub: SubscriptionState = {
     status: 'trial',
+    isLockedOut: false,
     trialStartDate: now.toISOString(),
     trialEndDate: trialEnd.toISOString(),
     planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
@@ -160,6 +257,8 @@ export function subscriptionForUser(email: string, existing?: SubscriptionState 
     nextPaymentDue: trialEnd.toISOString(),
     amountPaid: 0,
   };
+  saveToStorage(SUB_KEY, newTrialSub);
+  return newTrialSub;
 }
 
 export function isProTab(tab: string): boolean {
@@ -181,7 +280,7 @@ export function isFeatureAccessible(
     return { accessible: false, reason: 'pending_verification' };
   }
 
-  if (sub.status === 'expired') {
+  if (sub.status === 'expired' || sub.isLockedOut) {
     return { accessible: false, reason: 'trial_expired' };
   }
 
@@ -394,18 +493,39 @@ export function enforceZeroFreeProPolicy(): void {
       const isUnverified = !sub.amountPaid || sub.amountPaid <= 0 || !sub.transactionId || sub.transactionId.startsWith('ADM-');
       if (isUnverified) {
         const now = new Date();
-        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const returnedSub: SubscriptionState = {
-          ...sub,
-          status: 'trial',
-          planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
-          priceMonthly: 4.99,
-          autoRenew: false,
-          paymentMethod: '7-Day Free Trial ($0.00 today)',
-          nextPaymentDue: trialEnd.toISOString(),
-          amountPaid: 0,
-        };
-        saveToStorage(SUB_KEY, returnedSub);
+        const userEmail = user?.email || '';
+        const isLocked = isEmailTrialExpiredOrLocked(userEmail);
+        const isExpired = isLocked || (sub.trialEndDate && new Date(sub.trialEndDate) < now);
+
+        if (isExpired) {
+          permanentlyLockTrial(userEmail, 'Unearned Pro revoked and trial expired', sub.trialEndDate);
+          const returnedSub: SubscriptionState = {
+            ...sub,
+            status: 'expired',
+            isLockedOut: true,
+            lockReason: '7-Day Free Trial period ended. Account locked out. Subscription required.',
+            planName: 'Pro Tier (7-Day Trial Expired — Account Locked)',
+            priceMonthly: 4.99,
+            autoRenew: false,
+            paymentMethod: 'Trial Expired (Subscription Required)',
+            nextPaymentDue: 'Immediate (Trial Expired)',
+            amountPaid: 0,
+          };
+          saveToStorage(SUB_KEY, returnedSub);
+        } else {
+          // Still within initial trial window
+          const returnedSub: SubscriptionState = {
+            ...sub,
+            status: 'trial',
+            isLockedOut: false,
+            planName: 'Pro Monthly (7-Day Free Trial - Basic Functions)',
+            priceMonthly: 4.99,
+            autoRenew: false,
+            paymentMethod: '7-Day Free Trial ($0.00 today)',
+            amountPaid: 0,
+          };
+          saveToStorage(SUB_KEY, returnedSub);
+        }
       }
     }
 

@@ -26,6 +26,8 @@ import {
   loginWithAdminPin,
   lockAdminSession,
   enforceZeroFreeProPolicy,
+  permanentlyLockTrial,
+  isEmailTrialExpiredOrLocked,
   type UserAccount 
 } from './utils/auth';
 import { ProFeatureGateCard } from './components/ProFeatureGateCard';
@@ -152,7 +154,11 @@ export default function App() {
 
   const handleLoggedIn = (u: UserAccount) => {
     setUser(u);
-    setSubscription(subscriptionForUser(u.email, subscription));
+    const sub = subscriptionForUser(u.email, subscription);
+    setSubscription(sub);
+    if (sub.status === 'expired' || sub.isLockedOut) {
+      permanentlyLockTrial(u.email, sub.lockReason);
+    }
   };
 
   const trialDays = daysLeftInTrial(subscription);
@@ -167,11 +173,25 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          // If server says they are not Pro, but client has 'active', downgrade to correct status
-          if (!data.isPro && subscription.status === 'active') {
+          // If server says they are expired or locked out, lock them immediately!
+          if (data.status === 'expired' || data.isLockedOut) {
+            permanentlyLockTrial(user.email, data.reason);
+            if (subscription.status !== 'expired' || !subscription.isLockedOut) {
+              const locked: SubscriptionState = {
+                ...subscription,
+                status: 'expired',
+                isLockedOut: true,
+                lockReason: data.reason || '7-Day Free Trial period ended. Account locked out.',
+                planName: 'Pro Tier (7-Day Trial Expired — Account Locked)',
+              };
+              setSubscription(locked);
+              saveToStorage('studyhub_subscription', locked);
+            }
+          } else if (!data.isPro && subscription.status === 'active') {
             const corrected: SubscriptionState = {
               ...subscription,
               status: data.status,
+              isLockedOut: data.isLockedOut || false,
               planName: data.status === 'expired' ? 'Pro Tier (7-Day Trial Expired)' : '7-Day Free Trial (Basic Functions)',
             };
             setSubscription(corrected);
@@ -201,6 +221,25 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Real-Time Activity & Telemetry Heartbeat Ping to Backend
+  useEffect(() => {
+    const sendPing = () => {
+      fetch('/api/track/ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user?.email || undefined,
+          grade: currentGrade,
+          activeTab,
+        }),
+      }).catch(() => {});
+    };
+
+    sendPing();
+    const interval = setInterval(sendPing, 60000);
+    return () => clearInterval(interval);
+  }, [user?.email, currentGrade, activeTab]);
 
   // Global Power-User Keyboard Shortcuts Listener
   useEffect(() => {
@@ -492,12 +531,13 @@ export default function App() {
           </div>
         )}
 
-        {!canAccessCurrentTab ? (
+        {!canAccessCurrentTab.accessible ? (
           <ProFeatureGateCard
             tab={activeTab}
             onOpenPaymentModal={() => setIsSubscriptionOpen(true)}
             onNavigateToBasicTab={(tab) => setActiveTab(tab)}
             trialDaysRemaining={subscription.status === 'trial' ? daysLeftInTrial(subscription) : null}
+            isTrialExpired={subscription.status === 'expired' || Boolean(subscription.isLockedOut)}
           />
         ) : (
           <>
@@ -731,7 +771,7 @@ export default function App() {
       />
 
       <TrialExpiredLockModal
-        isOpen={subscription.status === 'expired' && !isAdmin}
+        isOpen={(subscription.status === 'expired' || Boolean(subscription.isLockedOut)) && !isAdmin}
         subscription={subscription}
         userEmail={user?.email || ''}
         onOpenPaymentModal={() => setIsSubscriptionOpen(true)}

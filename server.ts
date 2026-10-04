@@ -311,6 +311,81 @@ app.get('/api/user/subscription-status', (req, res) => {
   }
 });
 
+// 13b. Hardcode Lockout for Expired Trial Account
+app.post('/api/user/lock-account', (req, res) => {
+  try {
+    const { email, reason } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required.' });
+    }
+    const result = backendStore.lockUserAccount(String(email), reason);
+    res.json({ success: true, ...result, message: 'Account locked out. Trial reset disabled.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 14. Real-Time Activity & Telemetry Heartbeat Ping
+app.post('/api/track/ping', (req, res) => {
+  try {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const { email, grade, activeTab } = req.body || {};
+    backendStore.recordActivity({ ip: clientIp, email, grade, activeTab });
+    const tracking = backendStore.getLiveTrackingSummary();
+    res.json({ success: true, tracking });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 15. Real-Time Live Tracking Summary
+app.get('/api/admin/live-tracking', (req, res) => {
+  try {
+    const tracking = backendStore.getLiveTrackingSummary();
+    res.json({ success: true, tracking });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 16. Purge & Invalidate Stale Unpaid Payment Claims (>48h old without bank deposit)
+app.post('/api/admin/purge-stale-claims', (req, res) => {
+  try {
+    const result = backendStore.purgeOrExpireStaleClaims();
+    const updatedReport = backendStore.runDiagnostics();
+    res.json({ success: true, ...result, updatedReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 17. Reject / Invalidate Unpaid Payment Claim (Mark as Unpaid & Gated)
+app.post('/api/payments/reject', (req, res) => {
+  try {
+    const { paymentId, reason } = req.body || {};
+    if (!paymentId) return res.status(400).json({ success: false, error: 'paymentId is required.' });
+    const rejected = backendStore.rejectPayment(paymentId, reason);
+    if (!rejected) return res.status(404).json({ success: false, error: 'Payment claim not found.' });
+    res.json({ success: true, payment: rejected });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 18. Sync User Account upon Signup or Login
+app.post('/api/user/sync', (req, res) => {
+  try {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const { email, grade, activeTab } = req.body || {};
+    if (email) {
+      backendStore.recordActivity({ ip: clientIp, email, grade, activeTab });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Helper to get Gemini client
 function getGeminiAI() {
   const apiKey = process.env.GEMINI_API_KEY;

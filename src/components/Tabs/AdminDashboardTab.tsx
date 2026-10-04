@@ -440,6 +440,39 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     }
   };
 
+  // Reject / Invalidate Unpaid Claim Handler
+  const handleRejectPayment = async (paymentId: string) => {
+    try {
+      const res = await fetch('/api/payments/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId, reason: 'Unpaid: No matching deposit verified in Capitec Bank or PayPal.' }),
+      }).then((r) => r.json());
+      if (res.success) {
+        showToast('❌ Claim rejected as unpaid. Student access remains suspended.');
+        loadPaymentQueueFromBackend();
+        loadSubscribersFromBackend();
+      }
+    } catch {
+      showToast('❌ Failed to reject payment claim.');
+    }
+  };
+
+  // 1-Click Purge & Archive Stale Unpaid Claims
+  const handlePurgeStaleClaims = async () => {
+    try {
+      const res = await fetch('/api/admin/purge-stale-claims', { method: 'POST' }).then((r) => r.json());
+      if (res.success) {
+        showToast(`🧹 ${res.message || 'Stale claims purged.'}`);
+        loadPaymentQueueFromBackend();
+        loadSubscribersFromBackend();
+        loadDiagnosticsFromBackend();
+      }
+    } catch {
+      showToast('❌ Failed to purge stale claims.');
+    }
+  };
+
   // Add Subscriber
   const handleAddSubscriber = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -448,7 +481,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       return;
     }
 
-    const today = '2026-09-22';
+    const today = new Date().toISOString().split('T')[0];
     const trialDaysNum = parseInt(newSubTrialDays, 10) || 7;
     const trialEnd = new Date(Date.now() + trialDaysNum * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const isPro = newSubTier === 'Pro' || newSubTier === 'Institutional';
@@ -1769,13 +1802,24 @@ Zero Unpaid Access Guaranteed: YES`;
               </button>
             </div>
 
-            <span className="text-[11px] text-[#736B5E] dark:text-[#A6C4A7]">
-              {paymentQueueCategory === 'LIVE'
-                ? 'Showing live submissions from actual app visitors'
-                : paymentQueueCategory === 'DEMO'
-                ? 'Showing pre-seeded test scenarios'
-                : 'Showing all queue items'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-[#736B5E] dark:text-[#A6C4A7]">
+                {paymentQueueCategory === 'LIVE'
+                  ? 'Showing live submissions from actual app visitors'
+                  : paymentQueueCategory === 'DEMO'
+                  ? 'Showing pre-seeded test scenarios'
+                  : 'Showing all queue items'}
+              </span>
+
+              <button
+                type="button"
+                onClick={handlePurgeStaleClaims}
+                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-bold text-xs rounded-xl border border-rose-300 dark:border-rose-800 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                title="Archive and invalidate claims older than 48 hours that never paid"
+              >
+                <span>Archive Stale Claims (&gt;48h)</span>
+              </button>
+            </div>
           </div>
 
           {/* Payment Queue Table */}
@@ -1801,7 +1845,7 @@ Zero Unpaid Access Guaranteed: YES`;
                 }).length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-slate-500">
-                      No payment claims found in this view.
+                      No payment claims found in this view. All stale or unpaid records have been archived.
                     </td>
                   </tr>
                 ) : (
@@ -1813,6 +1857,9 @@ Zero Unpaid Access Guaranteed: YES`;
                     })
                     .map((item) => {
                     const isSettled = item.status === 'settled';
+                    const isExpiredUnpaid = item.status === 'expired_unpaid';
+                    const isRejected = item.status === 'rejected';
+
                     return (
                       <tr key={item.id} className="hover:bg-[#FDFBF7] dark:hover:bg-[#181E19] transition-colors">
                         <td className="p-3">
@@ -1859,6 +1906,14 @@ Zero Unpaid Access Guaranteed: YES`;
                               <Check className="w-3 h-3 text-emerald-600" />
                               <span>Settled &amp; Cleared</span>
                             </span>
+                          ) : isExpiredUnpaid ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold border border-slate-300 dark:border-slate-700" title={item.notes || 'Did not pay'}>
+                              <span>Archived (Unpaid &gt;48h)</span>
+                            </span>
+                          ) : isRejected ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 text-[10px] font-bold border border-rose-300">
+                              <span>Rejected (Unpaid)</span>
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-300">
                               <Clock className="w-3 h-3 text-amber-600" />
@@ -1871,15 +1926,32 @@ Zero Unpaid Access Guaranteed: YES`;
                             <span className="text-[11px] text-slate-400 italic">
                               Cleared
                             </span>
+                          ) : isExpiredUnpaid ? (
+                            <span className="text-[11px] text-rose-500 font-bold">
+                              Unpaid / Expired
+                            </span>
+                          ) : isRejected ? (
+                            <span className="text-[11px] text-red-600 font-bold">
+                              Rejected
+                            </span>
                           ) : (
-                            <button
-                              onClick={() => handleSettlePayment(item.id)}
-                              disabled={isSettlingPaymentId === item.id}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50 flex items-center gap-1 ml-auto"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>{isSettlingPaymentId === item.id ? 'Settling...' : 'Confirm & Settle'}</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleSettlePayment(item.id)}
+                                disabled={isSettlingPaymentId === item.id}
+                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50 flex items-center gap-1"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>{isSettlingPaymentId === item.id ? 'Settling...' : 'Confirm'}</span>
+                              </button>
+                              <button
+                                onClick={() => handleRejectPayment(item.id)}
+                                className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-800 transition-all cursor-pointer"
+                                title="Reject as unpaid (no deposit received)"
+                              >
+                                <span>Reject</span>
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

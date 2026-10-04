@@ -7,6 +7,7 @@ interface ProFeatureGateCardProps {
   onOpenPaymentModal: () => void;
   onNavigateToBasicTab?: (tab: TabType) => void;
   trialDaysRemaining?: number | null;
+  isTrialExpired?: boolean;
 }
 
 const TAB_INFO: Record<string, { title: string; subtitle: string; benefits: string[] }> = {
@@ -67,6 +68,7 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
   onOpenPaymentModal,
   onNavigateToBasicTab,
   trialDaysRemaining,
+  isTrialExpired = false,
 }) => {
   const feature = TAB_INFO[tab] || {
     title: 'The Study Hub Pro Feature',
@@ -81,21 +83,35 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
 
   return (
     <div className="max-w-3xl mx-auto my-8 px-4">
-      <div className="bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-900/60 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className={`bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border ${isTrialExpired ? 'border-rose-400 dark:border-rose-800' : 'border-amber-200 dark:border-amber-900/60'} rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden`}>
         
         {/* Subtle decorative glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className={`absolute top-0 right-0 w-80 h-80 ${isTrialExpired ? 'bg-rose-500/10' : 'bg-amber-400/10'} rounded-full blur-3xl pointer-events-none -mr-20 -mt-20`} />
 
         {/* Top Header Badge */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs font-bold shadow-2xs">
-            <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400 fill-amber-400/40" />
-            <span>Pro Exclusive Feature</span>
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${isTrialExpired ? 'bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200' : 'bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'} text-xs font-bold shadow-2xs`}>
+            {isTrialExpired ? (
+              <>
+                <Lock className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                <span>🔒 Hardcoded Anti-Reset Lock Active</span>
+              </>
+            ) : (
+              <>
+                <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400 fill-amber-400/40" />
+                <span>Pro Exclusive Feature</span>
+              </>
+            )}
           </div>
 
-          {trialDaysRemaining !== null && trialDaysRemaining !== undefined && (
+          {!isTrialExpired && trialDaysRemaining !== null && trialDaysRemaining !== undefined && (
             <div className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
               7-Day Trial (Basic Mode): <strong className="text-amber-600 dark:text-amber-400">{trialDaysRemaining}d remaining</strong>
+            </div>
+          )}
+          {isTrialExpired && (
+            <div className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-3 py-1 rounded-full border border-rose-300 dark:border-rose-800">
+              Trial Period Expired — Reset Disabled
             </div>
           )}
         </div>
@@ -103,21 +119,30 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
         {/* Feature Title & Description */}
         <div className="space-y-2 mb-6">
           <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <Lock className="w-6 h-6 text-amber-500 shrink-0" />
-            <span>{feature.title}</span>
+            <Lock className={`w-6 h-6 ${isTrialExpired ? 'text-rose-500' : 'text-amber-500'} shrink-0`} />
+            <span>{isTrialExpired ? 'Account Locked — Subscription Required' : feature.title}</span>
           </h2>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-            {feature.subtitle}
+            {isTrialExpired ? 'Your 7-day free trial has concluded. A hardcoded security lock is enforced: this trial cannot be reset. All learning tools are locked out until you subscribe.' : feature.subtitle}
           </p>
         </div>
 
         {/* Notice Explaining Trial Scope */}
-        <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs text-amber-950 dark:text-amber-200 mb-6 flex items-start gap-3">
-          <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <strong>7-Day Free Trial Notice:</strong> You are currently on the trial tier with access to core basic study functions (Study Planner, Smart Flashcards, Focus Studio, Notes Summarizer, and Practice Quizzes). To access this advanced Pro tool, complete your payment details authorization.
+        {isTrialExpired ? (
+          <div className="p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-xs text-rose-950 dark:text-rose-200 mb-6 flex items-start gap-3">
+            <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <strong>Trial Reset Prohibited:</strong> Logging out, creating a new session, or clearing storage will not reset your trial. To regain uninterrupted access, subscribe via Capitec Bank EFT (R89/mo) or PayPal/Card ($4.99/mo).
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs text-amber-950 dark:text-amber-200 mb-6 flex items-start gap-3">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong>7-Day Free Trial Notice:</strong> You are currently on the trial tier with access to core basic study functions (Study Planner, Smart Flashcards, Focus Studio, Notes Summarizer, and Practice Quizzes). To access this advanced Pro tool, complete your payment details authorization.
+            </div>
+          </div>
+        )}
 
         {/* Feature Benefits List */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
@@ -133,14 +158,14 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             onClick={onOpenPaymentModal}
-            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2"
+            className={`w-full sm:w-auto px-6 py-3 ${isTrialExpired ? 'bg-gradient-to-r from-rose-600 via-amber-600 to-emerald-600' : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'} text-white text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2`}
           >
             <Crown className="w-4 h-4 text-amber-200 fill-amber-200/30" />
-            <span>Enter Payment Details & Activate Pro</span>
+            <span>{isTrialExpired ? 'Subscribe & Unlock Account (R89 / $4.99)' : 'Enter Payment Details & Activate Pro'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          {onNavigateToBasicTab && (
+          {!isTrialExpired && onNavigateToBasicTab && (
             <button
               onClick={() => onNavigateToBasicTab('planner')}
               className="w-full sm:w-auto px-4 py-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
