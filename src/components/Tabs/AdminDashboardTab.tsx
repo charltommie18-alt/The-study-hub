@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SubscriberRecord, DailyAnalyticsRecord, CurrencyCode, GradeLevel, DiagnosticsReport, DailySecurityReportData, DiagnosticFault, LiveScanReport } from '../../types';
+import { SubscriberRecord, DailyAnalyticsRecord, CurrencyCode, GradeLevel, DiagnosticsReport, DailySecurityReportData, DiagnosticFault, LiveScanReport, PromoCampaignConfig } from '../../types';
 import { INITIAL_DAILY_ANALYTICS, GRADE_CONFIGS } from '../../data/initialData';
 import { loadUser, saveUser, isAdminEmail } from '../../utils/auth';
 import { 
@@ -44,7 +44,9 @@ import {
   FileCheck, 
   Mail, 
   Bell,
-  Zap
+  Zap,
+  Flame,
+  Tag
 } from 'lucide-react';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../data/paymentConfig';
 import { 
@@ -60,7 +62,10 @@ import {
   broadcastPaymentReminder, 
   fetchDailyReport,
   fetchLiveScan,
-  purgeOldDemoRecords
+  purgeOldDemoRecords,
+  fetchPromoConfig,
+  togglePromoCampaign,
+  broadcastPromoCampaign
 } from '../../utils/subscriptionApi';
 import { PaymentAuditRecord } from '../../serverSubscriberStore';
 
@@ -161,8 +166,8 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
 
   const [analytics] = useState<DailyAnalyticsRecord[]>(INITIAL_DAILY_ANALYTICS);
 
-  // Active section view: 'diagnostics' vs 'daily_report' vs 'subscribers' vs 'payment_desk' vs 'traffic_report'
-  const [adminActiveSection, setAdminActiveSection] = useState<'diagnostics' | 'daily_report' | 'subscribers' | 'payment_desk' | 'traffic_report'>('diagnostics');
+  // Active section view: 'diagnostics' vs 'daily_report' vs 'subscribers' vs 'payment_desk' vs 'traffic_report' vs 'promo_manager'
+  const [adminActiveSection, setAdminActiveSection] = useState<'diagnostics' | 'daily_report' | 'subscribers' | 'payment_desk' | 'traffic_report' | 'promo_manager'>('diagnostics');
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -179,6 +184,24 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
   const [isScanningLive, setIsScanningLive] = useState(false);
   const [isPurgingDemo, setIsPurgingDemo] = useState(false);
   const [showLiveScanModal, setShowLiveScanModal] = useState(false);
+
+  // Special $1.99 Promotional Campaign State
+  const [promoConfig, setPromoConfig] = useState<PromoCampaignConfig | null>({
+    isActive: true,
+    promoSpecialPriceUSD: 1.99,
+    regularPriceUSD: 4.99,
+    promoSpecialPriceZAR: 35.0,
+    regularPriceZAR: 89.0,
+    campaignName: 'Flash Sale: $1.99 / Month Special Subscription',
+    discountPercentage: 60,
+    broadcastsSent: 3,
+    claimedPromoCount: 42,
+  });
+  const [isLoadingPromo, setIsLoadingPromo] = useState(false);
+  const [isBroadcastingPromo, setIsBroadcastingPromo] = useState(false);
+  const [isTogglingPromo, setIsTogglingPromo] = useState(false);
+  const [promoCustomMessage, setPromoCustomMessage] = useState('');
+  const [promoCopiedField, setPromoCopiedField] = useState<string | null>(null);
 
   // Add Subscriber Form State
   const [newSubName, setNewSubName] = useState('');
@@ -363,6 +386,62 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     }
   };
 
+  // Load Promo Configuration from Backend
+  const loadPromoFromBackend = useCallback(async () => {
+    setIsLoadingPromo(true);
+    try {
+      const res = await fetchPromoConfig();
+      if (res.success && res.promo) {
+        setPromoConfig(res.promo);
+      }
+    } catch (err) {
+      console.warn('Promo config fetch error', err);
+    } finally {
+      setIsLoadingPromo(false);
+    }
+  }, []);
+
+  // Toggle $1.99 Special Promotional Campaign
+  const handleTogglePromo = async () => {
+    setIsTogglingPromo(true);
+    try {
+      const res = await togglePromoCampaign();
+      if (res.success && res.promo) {
+        setPromoConfig(res.promo);
+        showToast(res.promo.isActive ? '🔥 Special $1.99 Flash Sale activated!' : '⏸️ Special $1.99 Flash Sale paused.');
+      }
+    } catch {
+      showToast('❌ Failed to toggle promo campaign.');
+    } finally {
+      setIsTogglingPromo(false);
+    }
+  };
+
+  // Broadcast $1.99 Promo to All Trial & Expired Accounts
+  const handleBroadcastPromo = async () => {
+    setIsBroadcastingPromo(true);
+    try {
+      const res = await broadcastPromoCampaign(promoCustomMessage || undefined);
+      if (res.success) {
+        showToast(`📢 ${res.message}`);
+        loadPromoFromBackend();
+      }
+    } catch {
+      showToast('❌ Failed to broadcast promo invitation.');
+    } finally {
+      setIsBroadcastingPromo(false);
+    }
+  };
+
+  const copyPromoText = (text: string, field: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setPromoCopiedField(field);
+      setTimeout(() => setPromoCopiedField(null), 2500);
+      showToast('📋 Copied to clipboard!');
+    } catch {}
+  };
+
   // Initial & Dependency-Based Loads
   useEffect(() => {
     if (isAuthenticated) {
@@ -370,8 +449,9 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       loadPaymentQueueFromBackend();
       loadDiagnosticsFromBackend();
       loadDailyReportFromBackend();
+      loadPromoFromBackend();
     }
-  }, [isAuthenticated, loadSubscribersFromBackend, loadPaymentQueueFromBackend, loadDiagnosticsFromBackend, loadDailyReportFromBackend]);
+  }, [isAuthenticated, loadSubscribersFromBackend, loadPaymentQueueFromBackend, loadDiagnosticsFromBackend, loadDailyReportFromBackend, loadPromoFromBackend]);
 
   // Handle PIN form submit - strictly 10111 only, no other pins allowed
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -1254,6 +1334,21 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Live Traffic ({latestDaily?.activeUsers || backendMetrics?.todayDAU || 1})</span>
+          </button>
+
+          <button
+            onClick={() => setAdminActiveSection('promo_manager')}
+            className={`px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer relative ${
+              adminActiveSection === 'promo_manager'
+                ? 'bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#111612] text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>Special $1.99 Promo</span>
+            <span className="px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[9px] font-black uppercase">
+              {promoConfig?.isActive ? 'Active' : 'Paused'}
+            </span>
           </button>
         </div>
       </div>
@@ -2412,6 +2507,282 @@ Zero Unpaid Access Guaranteed: YES`;
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* Section View: Special $1.99 Promotional Campaign Manager      */}
+      {/* ============================================================= */}
+      {adminActiveSection === 'promo_manager' && (
+        <div className="bg-[#FBF9F5] dark:bg-[#181E19] border border-[#E3DDD3] dark:border-[#2D382F] rounded-2xl p-5 sm:p-6 shadow-xs space-y-6">
+          
+          {/* Promo Hero Header */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 text-white shadow-lg relative overflow-hidden border border-amber-300/40">
+            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white text-red-700 text-xs font-black uppercase tracking-wider shadow-xs flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+                    <span>60% OFF FLASH CAMPAIGN</span>
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase ${
+                    promoConfig?.isActive ? 'bg-emerald-500/90 text-white' : 'bg-slate-700 text-slate-200'
+                  }`}>
+                    {promoConfig?.isActive ? '● Live Across Platform' : '○ Paused'}
+                  </span>
+                </div>
+
+                <h3 className="text-xl sm:text-2xl font-serif font-extrabold tracking-tight">
+                  Special $1.99 / Month Promotional Subscription
+                </h3>
+                <p className="text-xs sm:text-sm text-white/95 max-w-2xl leading-relaxed">
+                  Active flash sale for learners: reduced from <strong>$4.99/mo to $1.99/mo</strong> (and <strong>R89/mo to R35/mo</strong> for South African Capitec Bank EFT). Increases conversion for trial users and unlocks locked accounts.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
+                <button
+                  onClick={handleTogglePromo}
+                  disabled={isTogglingPromo}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    promoConfig?.isActive
+                      ? 'bg-white text-slate-800 hover:bg-slate-100'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  }`}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isTogglingPromo ? 'animate-spin' : ''}`} />
+                  <span>{promoConfig?.isActive ? 'Pause Promotion' : 'Activate $1.99 Promotion'}</span>
+                </button>
+
+                <button
+                  onClick={handleBroadcastPromo}
+                  disabled={isBroadcastingPromo}
+                  className="px-4 py-2.5 bg-slate-900/80 hover:bg-black text-amber-200 border border-amber-300/40 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Send className={`w-3.5 h-3.5 ${isBroadcastingPromo ? 'animate-spin' : ''}`} />
+                  <span>Broadcast Promo Blast</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing & Key Metrics Overview */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 bg-white dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl space-y-1">
+              <span className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase block">Special USD Price</span>
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono flex items-baseline gap-1">
+                <span>${promoConfig?.promoSpecialPriceUSD.toFixed(2) || '1.99'}</span>
+                <span className="text-xs text-slate-400 line-through font-normal">${promoConfig?.regularPriceUSD.toFixed(2) || '4.99'}</span>
+              </div>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">60% Discount Applied</span>
+            </div>
+
+            <div className="p-4 bg-white dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl space-y-1">
+              <span className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase block">Special ZAR Price</span>
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono flex items-baseline gap-1">
+                <span>R{promoConfig?.promoSpecialPriceZAR.toFixed(2) || '35.00'}</span>
+                <span className="text-xs text-slate-400 line-through font-normal">R{promoConfig?.regularPriceZAR.toFixed(2) || '89.00'}</span>
+              </div>
+              <span className="text-[10px] text-red-600 dark:text-red-400 font-semibold">Capitec Bank EFT Rate</span>
+            </div>
+
+            <div className="p-4 bg-white dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl space-y-1">
+              <span className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase block">Broadcast Blasts</span>
+              <div className="text-2xl font-black text-[#2D362E] dark:text-white font-mono">
+                {promoConfig?.broadcastsSent || 3}
+              </div>
+              <span className="text-[10px] text-[#736B5E] dark:text-[#A6C4A7]">Learner In-App &amp; Email Blasts</span>
+            </div>
+
+            <div className="p-4 bg-white dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl space-y-1">
+              <span className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase block">Promo Claims Logged</span>
+              <div className="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono">
+                {promoConfig?.claimedPromoCount || 42}
+              </div>
+              <span className="text-[10px] text-purple-700 dark:text-purple-300 font-semibold">Subscribers Registered</span>
+            </div>
+          </div>
+
+          {/* Broadcast Composer & 1-Click Dispatch */}
+          <div className="p-5 bg-white dark:bg-[#111612] border border-[#D9D1C7] dark:border-[#2D382F] rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-[#2D362E] dark:text-white flex items-center gap-2">
+                  <Send className="w-4 h-4 text-emerald-600" />
+                  <span>Broadcast $1.99 Promotional Offer to Learners</span>
+                </h4>
+                <p className="text-xs text-[#736B5E] dark:text-[#A6C4A7] mt-0.5">
+                  Sends an immediate high-priority invitation to all active 7-day trial users, expiring accounts, and locked-out students.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 text-xs font-bold rounded-lg border border-amber-300 dark:border-amber-700">
+                Target: {subscribers.filter((s) => s.trialStatus !== 'active').length} Learners
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Custom Broadcast Message (Optional):
+              </label>
+              <textarea
+                value={promoCustomMessage}
+                onChange={(e) => setPromoCustomMessage(e.target.value)}
+                placeholder="🔥 Flash Sale Alert: Get StudyHub Pro for only $1.99 / R35.00 per month (Save 60%)! Unlocks all 14 AI tools, past exam memos, and audio podcasts. Claim your discount now before the sale ends!"
+                rows={3}
+                className="w-full p-3 bg-[#FBF9F5] dark:bg-[#181E19] border border-[#D9D1C7] dark:border-[#2D382F] rounded-xl text-xs text-[#2D362E] dark:text-white focus:outline-none focus:border-emerald-500 font-sans"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E8E2D8] dark:border-[#263227]">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Includes direct payment instructions for both <strong>Capitec Bank EFT (R35)</strong> and <strong>PayPal / Debit Card ($1.99)</strong>.
+              </div>
+
+              <button
+                onClick={handleBroadcastPromo}
+                disabled={isBroadcastingPromo}
+                className="px-5 py-2.5 bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 hover:from-red-700 hover:via-amber-700 hover:to-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4 text-amber-200" />
+                <span>{isBroadcastingPromo ? 'Dispatched...' : 'Dispatch $1.99 Flash Sale Broadcast'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Merchant Quick Copy Templates for Charl Tommie */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* PayPal Gateway Copy Card */}
+            <div className="p-4 bg-white dark:bg-[#111612] border border-blue-200 dark:border-blue-900/60 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+                    P
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-blue-950 dark:text-blue-100">Official PayPal $1.99 Checkout Gateway</h5>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-300">URJZ4DJH4RKHQ • Merchant: Ct Fun</span>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 text-[10px] font-bold">
+                  $1.99 Special Rate
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-xl border border-blue-100 dark:border-blue-900/60 text-xs font-mono text-slate-700 dark:text-slate-300 break-all">
+                {OFFICIAL_PAYMENT_CONFIG.paypalCheckoutUrl}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyPromoText(OFFICIAL_PAYMENT_CONFIG.paypalCheckoutUrl, 'paypal-url')}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {promoCopiedField === 'paypal-url' ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{promoCopiedField === 'paypal-url' ? 'Copied Link!' : 'Copy PayPal URL'}</span>
+                </button>
+
+                <a
+                  href={OFFICIAL_PAYMENT_CONFIG.paypalCheckoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Gateway</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Capitec Bank EFT Copy Card */}
+            <div className="p-4 bg-white dark:bg-[#111612] border border-red-200 dark:border-red-900/60 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center font-black text-xs">
+                    C
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-red-950 dark:text-red-100">Capitec Bank R35.00 EFT Payment Details</h5>
+                    <span className="text-[10px] text-red-600 dark:text-red-300">Acc: 2557334258 • Branch: 470010</span>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-200 text-[10px] font-bold">
+                  R35.00 Special Rate
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-red-50/70 dark:bg-red-950/40 rounded-xl border border-red-100 dark:border-red-900/60 text-xs font-mono text-slate-700 dark:text-slate-300 space-y-0.5">
+                <div>Bank: <strong>Capitec Bank</strong></div>
+                <div>Account Name: <strong>Ct Fun</strong></div>
+                <div>Account: <strong>2557334258</strong> | Branch: <strong>470010</strong></div>
+                <div>Promo Deposit Amount: <strong>R35.00</strong> (was R89.00)</div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyPromoText(
+                    `The Study Hub Pro Promo (R35/mo):\nBank: Capitec Bank\nAccount: 2557334258\nBranch: 470010\nAcc Name: Ct Fun\nAmount: R35.00\nPlease email proof to charltommie18@gmail.com`,
+                    'capitec-details'
+                  )}
+                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {promoCopiedField === 'capitec-details' ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{promoCopiedField === 'capitec-details' ? 'Copied Slip!' : 'Copy Capitec R35 Slip'}</span>
+                </button>
+
+                <a
+                  href={OFFICIAL_PAYMENT_CONFIG.capitecBankingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Capitec Online</span>
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          {/* WhatsApp & Email Quick Share Message Blasts */}
+          <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-blue-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+                <h5 className="font-bold text-xs text-emerald-950 dark:text-emerald-100">
+                  Ready-to-Send WhatsApp &amp; SMS Flash Sale Script
+                </h5>
+              </div>
+              <button
+                type="button"
+                onClick={() => copyPromoText(
+                  `*The Study Hub Pro — Special $1.99 / R35 Flash Sale!*\n\n` +
+                  `Hi Learner! We are running a limited-time special: Get complete access to The Study Hub Pro for only *R35.00 / month* (or *$1.99 / month* via PayPal/Card) instead of the normal R89 / $4.99.\n\n` +
+                  `Included:\n` +
+                  `• All Past Exam Papers & Official Memorandums\n` +
+                  `• Multilingual AI Audio Podcasts (Afrikaans, English, Zulu)\n` +
+                  `• AI Socratic Voice Tutor & Full Study Summaries\n\n` +
+                  `*Payment Options:*\n` +
+                  `🇿🇦 Capitec Bank EFT: Acc 2557334258 | Branch 470010 | Amount: R35.00\n` +
+                  `🌍 PayPal / Card ($1.99): https://www.paypal.com/ncp/payment/URJZ4DJH4RKHQ\n\n` +
+                  `Send your proof of payment to charltommie18@gmail.com to instantly unlock your account!`,
+                  'whatsapp-script'
+                )}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                {promoCopiedField === 'whatsapp-script' ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{promoCopiedField === 'whatsapp-script' ? 'Copied WhatsApp Script!' : 'Copy WhatsApp Script'}</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+              Paste this directly into your student WhatsApp study groups or direct messages to convert expiring trial learners and unlock locked accounts.
+            </p>
           </div>
 
         </div>

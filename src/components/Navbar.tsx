@@ -287,13 +287,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ) : subscription?.status === 'expired' ? (
                   <>
                     <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
-                    <span>Trial Expired</span>
+                    <span>Trial Expired • $1.99 Deal</span>
                   </>
                 ) : (
                   <>
                     <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-200 fill-amber-200/30" />
                     <span>
-                      7d Trial {subscription ? `(${daysLeftInTrial(subscription)}d left)` : ''}
+                      7d Trial {subscription ? `(${daysLeftInTrial(subscription)}d left)` : ''} • $1.99 Deal
                     </span>
                   </>
                 )}

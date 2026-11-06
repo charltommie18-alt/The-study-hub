@@ -179,7 +179,7 @@ export interface SubscriberRecord {
   trialEndDate?: string;
   trialStatus: 'trial' | 'active' | 'expired';
   paymentDueDate?: string;
-  paymentStatus: 'Paid Pro' | 'Active Trial ($0)' | 'Pending Payment (Trial Expired)' | 'Overdue' | 'Reminder Sent (Trial Expired - Send Proof)' | 'Reminder Sent (Trial Active - Send Proof)';
+  paymentStatus: 'Paid Pro' | 'Active Trial ($0)' | 'Pending Payment (Trial Expired)' | 'Overdue' | 'Reminder Sent (Trial Expired - Send Proof)' | 'Reminder Sent (Trial Active - Send Proof)' | 'Pending Verification ($1.99 Special Rate)';
   paymentMethod?: string;
   lastPaymentAmount?: number;
   accessLevel: 'Basic (Trial)' | 'Full Pro Unlocked' | 'Access Suspended';
