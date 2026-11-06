@@ -1,4 +1,4 @@
-import { SubscriberRecord, CurrencyCode, DiagnosticsReport, DailySecurityReportData } from '../types';
+import { SubscriberRecord, CurrencyCode, DiagnosticsReport, DailySecurityReportData, LiveScanReport, PromoCampaignConfig } from '../types';
 import { PaymentAuditRecord } from '../serverSubscriberStore';
 
 export interface SubscribersApiResponse {
@@ -203,3 +203,79 @@ export async function verifyUserSubscriptionStatus(email: string): Promise<{
   }
   return res.json();
 }
+
+export async function fetchLiveScan(): Promise<{ success: boolean; scanReport: LiveScanReport }> {
+  const res = await fetch('/api/admin/live-scan');
+  if (!res.ok) {
+    throw new Error('Failed to execute live system scan');
+  }
+  return res.json();
+}
+
+export async function purgeOldDemoRecords(): Promise<{
+  success: boolean;
+  result: { purgedCount: number; remainingRealCount: number; message: string };
+  updatedScan: LiveScanReport;
+}> {
+  const res = await fetch('/api/admin/purge-demo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to purge demo records');
+  }
+  return res.json();
+}
+
+export async function fetchPromoConfig(): Promise<{ success: boolean; promo: PromoCampaignConfig }> {
+  const res = await fetch('/api/promo/config');
+  if (!res.ok) {
+    throw new Error('Failed to fetch promotional configuration');
+  }
+  return res.json();
+}
+
+export async function togglePromoCampaign(updates?: Partial<PromoCampaignConfig>): Promise<{ success: boolean; promo: PromoCampaignConfig }> {
+  const res = await fetch('/api/promo/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates || {}),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update promotional campaign');
+  }
+  return res.json();
+}
+
+export async function broadcastPromoCampaign(customMessage?: string): Promise<{
+  success: boolean;
+  notifiedCount: number;
+  message: string;
+  targetSummary: { zarCount: number; intlCount: number };
+}> {
+  const res = await fetch('/api/promo/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customMessage }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to broadcast promotional campaign');
+  }
+  return res.json();
+}
+
+export async function claimPromoSubscription(email: string, paymentMethod?: string, reference?: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const res = await fetch('/api/promo/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, paymentMethod, reference }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to log promotional subscription claim');
+  }
+  return res.json();
+}
+

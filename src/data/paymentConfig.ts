@@ -16,6 +16,12 @@ export interface PaymentGatewayConfig {
   capitecBankingUrl: string;
   supportEmail: string;
   supportPhoneWhatsapp: string;
+  promoSpecialPriceUSD: number;
+  regularPriceUSD: number;
+  promoSpecialPriceZAR: number;
+  regularPriceZAR: number;
+  isSpecialPromoActive: boolean;
+  specialPromoCampaignName: string;
 }
 
 /**
@@ -37,6 +43,12 @@ export const OFFICIAL_PAYMENT_CONFIG: PaymentGatewayConfig = {
   capitecBankingUrl: 'https://direct.capitecbank.co.za/',
   supportEmail: 'charltommie18@gmail.com',
   supportPhoneWhatsapp: '+27 82 000 0000',
+  promoSpecialPriceUSD: 1.99,
+  regularPriceUSD: 4.99,
+  promoSpecialPriceZAR: 35.0,
+  regularPriceZAR: 89.0,
+  isSpecialPromoActive: true,
+  specialPromoCampaignName: 'Flash Sale: $1.99 / Month Special Subscription',
 };
 
 /**

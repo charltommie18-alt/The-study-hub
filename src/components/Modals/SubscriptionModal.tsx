@@ -25,7 +25,7 @@ import {
 import { SubscriptionState, CurrencyCode } from '../../types';
 import { activateProWithPayment, submitPaymentClaim, PaymentDetailsInput } from '../../utils/auth';
 import { OFFICIAL_PAYMENT_CONFIG, generateStudentPaymentRef, generateWhatsappProofUrl, generateEmailProofUrl } from '../../data/paymentConfig';
-import { submitPaymentProof } from '../../utils/subscriptionApi';
+import { submitPaymentProof, claimPromoSubscription } from '../../utils/subscriptionApi';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -37,15 +37,24 @@ interface SubscriptionModalProps {
   userName?: string;
 }
 
-const PRICING: Record<CurrencyCode, { amount: number; symbol: string; label: string }> = {
-  USD: { amount: 4.99, symbol: '$', label: '$4.99 / month' },
-  ZAR: { amount: 89.0, symbol: 'R', label: 'R89.00 / month' },
-  EUR: { amount: 4.49, symbol: '€', label: '€4.49 / month' },
-  GBP: { amount: 3.99, symbol: '£', label: '£3.99 / month' },
-  JMD: { amount: 750.0, symbol: 'J$', label: 'J$750.00 / month' },
-  NGN: { amount: 4500.0, symbol: '₦', label: '₦4,500 / month' },
-  CAD: { amount: 6.99, symbol: 'CA$', label: 'CA$6.99 / month' },
-  AUD: { amount: 7.49, symbol: 'A$', label: 'A$7.49 / month' },
+export interface PriceTier {
+  amount: number;
+  regularAmount: number;
+  symbol: string;
+  label: string;
+  regularLabel: string;
+  discountBadge: string;
+}
+
+const PRICING: Record<CurrencyCode, PriceTier> = {
+  USD: { amount: 1.99, regularAmount: 4.99, symbol: '$', label: '$1.99 / month', regularLabel: '$4.99', discountBadge: '60% OFF' },
+  ZAR: { amount: 35.0, regularAmount: 89.0, symbol: 'R', label: 'R35.00 / month', regularLabel: 'R89.00', discountBadge: '60% OFF' },
+  EUR: { amount: 1.89, regularAmount: 4.49, symbol: '€', label: '€1.89 / month', regularLabel: '€4.49', discountBadge: '58% OFF' },
+  GBP: { amount: 1.59, regularAmount: 3.99, symbol: '£', label: '£1.59 / month', regularLabel: '£3.99', discountBadge: '60% OFF' },
+  JMD: { amount: 299.0, regularAmount: 750.0, symbol: 'J$', label: 'J$299.00 / month', regularLabel: 'J$750.00', discountBadge: '60% OFF' },
+  NGN: { amount: 1800.0, regularAmount: 4500.0, symbol: '₦', label: '₦1,800 / month', regularLabel: '₦4,500', discountBadge: '60% OFF' },
+  CAD: { amount: 2.69, regularAmount: 6.99, symbol: 'CA$', label: 'CA$2.69 / month', regularLabel: 'CA$6.99', discountBadge: '62% OFF' },
+  AUD: { amount: 2.99, regularAmount: 7.49, symbol: 'A$', label: 'A$2.99 / month', regularLabel: 'A$7.49', discountBadge: '60% OFF' },
 };
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
@@ -188,6 +197,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             reference: refToLog,
             notes: `Checkout submission via ${paymentType.toUpperCase()} (${selectedCurrency} ${PRICING[selectedCurrency].amount})`,
           }).catch((err) => console.warn('Failed to sync payment claim to backend:', err));
+
+          claimPromoSubscription(userEmail || 'student@thestudyhub.app', paymentType, refToLog).catch(() => {});
         }, 800);
       }, 700);
     }, 700);
@@ -469,35 +480,98 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           {!isProcessing && !confirmedSub && !isActivePro && (
             <form onSubmit={handlePaymentSubmit} className="space-y-5">
               
+              {/* Special $1.99 Flash Promo Hero Banner */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 text-white shadow-lg relative overflow-hidden border border-amber-300/40">
+                <div className="absolute -right-4 -bottom-4 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none" />
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                      <Flame className="w-6 h-6 text-amber-200 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-extrabold text-sm sm:text-base tracking-tight text-white drop-shadow-xs">
+                          ⚡ Special $1.99 Flash Promotion Active!
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-white text-red-600 font-black text-[10px] uppercase shadow-xs">
+                          Save 60%
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-white/95 mt-0.5 leading-snug">
+                        Limited-time discount: Get complete access to all 14 Pro features for only <strong className="font-extrabold underline text-amber-100">$1.99 / month</strong> (reduced from $4.99). Rate remains locked in!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="sm:text-right shrink-0 bg-black/20 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none flex sm:flex-col justify-between sm:justify-center items-center sm:items-end">
+                    <span className="text-[11px] text-white/80 line-through font-mono">
+                      {PRICING[selectedCurrency].regularLabel}
+                    </span>
+                    <div className="text-xl font-black text-amber-200 font-mono tracking-tight flex items-baseline gap-1">
+                      <span>{PRICING[selectedCurrency].symbol}{PRICING[selectedCurrency].amount.toFixed(2)}</span>
+                      <span className="text-xs text-white/80 font-normal">/mo</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Currency Selector */}
               <div>
-                <label className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase tracking-wider block mb-1.5">
-                  Select Billing Currency
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-bold text-[#736B5E] dark:text-[#A6C4A7] uppercase tracking-wider block">
+                    Select Billing Currency
+                  </label>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    🔥 60% Special Applied
+                  </span>
+                </div>
                 <div className="grid grid-cols-5 gap-1.5">
-                  {(['USD', 'ZAR', 'EUR', 'GBP', 'JMD'] as CurrencyCode[]).map((curr) => (
-                    <button
-                      key={curr}
-                      type="button"
-                      onClick={() => setSelectedCurrency(curr)}
-                      className={`py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border ${
-                        selectedCurrency === curr
-                          ? 'bg-[#5A6D5B] text-white border-[#5A6D5B] shadow-xs'
-                          : 'bg-white dark:bg-[#181E19] text-[#575047] dark:text-[#A6C4A7] border-[#D9D1C7] dark:border-[#2D382F] hover:bg-[#F2EFE9]'
-                      }`}
-                    >
-                      <div className="text-[11px]">{curr}</div>
-                      <div className="text-[10px] font-normal opacity-90">{PRICING[curr].label.split('/')[0]}</div>
-                    </button>
-                  ))}
+                  {(['USD', 'ZAR', 'EUR', 'GBP', 'JMD'] as CurrencyCode[]).map((curr) => {
+                    const tier = PRICING[curr];
+                    const isSelected = selectedCurrency === curr;
+                    return (
+                      <button
+                        key={curr}
+                        type="button"
+                        onClick={() => setSelectedCurrency(curr)}
+                        className={`py-2 px-1 text-center rounded-xl transition-all cursor-pointer border relative ${
+                          isSelected
+                            ? 'bg-[#5A6D5B] text-white border-[#5A6D5B] shadow-sm'
+                            : 'bg-white dark:bg-[#181E19] text-[#575047] dark:text-[#A6C4A7] border-[#D9D1C7] dark:border-[#2D382F] hover:bg-[#F2EFE9]'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{curr}</div>
+                        <div className="text-[11px] font-mono font-extrabold mt-0.5">
+                          {tier.symbol}{tier.amount.toFixed(curr === 'ZAR' || curr === 'JMD' ? 0 : 2)}
+                        </div>
+                        <div className={`text-[9px] line-through ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                          {tier.regularLabel.split('/')[0]}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Order Summary & Terms Breakdown */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800/80 text-xs space-y-2">
-                <div className="flex justify-between items-center font-bold text-[#2D362E] dark:text-white">
-                  <span>Pro Plan Monthly:</span>
-                  <span className="font-mono text-sm">{PRICING[selectedCurrency].label}</span>
+                <div className="flex justify-between items-center text-[#2D362E] dark:text-white">
+                  <span>Regular Plan Rate:</span>
+                  <span className="font-mono text-xs line-through text-slate-500 dark:text-slate-400">
+                    {PRICING[selectedCurrency].regularLabel} / month
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center font-bold text-[#2D362E] dark:text-white text-sm">
+                  <span className="flex items-center gap-1.5">
+                    <span>Special Promotional Rate:</span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-red-600 text-white text-[10px] font-black uppercase">
+                      {PRICING[selectedCurrency].discountBadge}
+                    </span>
+                  </span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-extrabold text-base">
+                    {PRICING[selectedCurrency].label}
+                  </span>
                 </div>
 
                 {isTrial ? (
@@ -507,17 +581,19 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       <span className="font-mono text-sm">{PRICING[selectedCurrency].symbol}0.00</span>
                     </div>
                     <p className="text-[11px] text-[#736B5E] dark:text-[#A6C4A7] leading-relaxed">
-                      Your trial started when you signed in. Confirming your payment details activates full Pro access today with <strong>$0.00 charged now</strong>. Your first charge of {PRICING[selectedCurrency].label} will only occur after your 7-day trial ends on {subscription.trialEndDate?.slice(0, 10) || 'day 7'}. Cancel anytime before with 1 click.
+                      Your trial started when you signed in. Confirming your payment details activates full Pro access today with <strong>$0.00 charged now</strong>. Your promotional subscription rate of <strong>{PRICING[selectedCurrency].label}</strong> (saving 60%) will only bill after your 7-day trial ends on {subscription.trialEndDate?.slice(0, 10) || 'day 7'}. Cancel anytime before with 1 click.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-1.5 pt-1.5 border-t border-amber-200 dark:border-amber-800">
                     <div className="flex justify-between text-amber-900 dark:text-amber-200 font-bold">
-                      <span>Due Today (Instant Pro Activation):</span>
-                      <span className="font-mono text-sm">{PRICING[selectedCurrency].symbol}{PRICING[selectedCurrency].amount.toFixed(2)}</span>
+                      <span>Due Today (Special Promotion Activation):</span>
+                      <span className="font-mono text-base text-emerald-700 dark:text-emerald-400 font-black">
+                        {PRICING[selectedCurrency].symbol}{PRICING[selectedCurrency].amount.toFixed(2)}
+                      </span>
                     </div>
                     <p className="text-[11px] text-[#736B5E] dark:text-[#A6C4A7] leading-relaxed">
-                      Your 7-day free trial has expired. Confirm your payment details to immediately reactivate The Study Hub Pro and all learning tools.
+                      Your 7-day free trial has expired. Confirm your payment details now to unlock The Study Hub Pro at our special discount rate of <strong>{PRICING[selectedCurrency].label}</strong> instead of the normal {PRICING[selectedCurrency].regularLabel}.
                     </p>
                   </div>
                 )}

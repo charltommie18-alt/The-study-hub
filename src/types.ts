@@ -373,6 +373,32 @@ export interface DailySecurityReportData {
   auditFindings: string[];
 }
 
+export interface LiveScanReport {
+  timestamp: string;
+  scanDate: string;
+  scanDurationMs: number;
+  totalSubscribersAudited: number;
+  realUsersCount: number;
+  demoUsersCount: number;
+  verifiedPaidCount: number;
+  activeTrialCount: number;
+  expiredLockedCount: number;
+  pendingClaimsCount: number;
+  clearedRevenueZAR: number;
+  clearedRevenueUSD: number;
+  liveDAU: number;
+  onlineNow: number;
+  hardcodedNumbersAudited: {
+    stuckDemoSubscribersRemoved: boolean;
+    oldSeptemberDatesFixed: boolean;
+    hardcoded812DAUFixed: boolean;
+    antiResetLockoutActive: boolean;
+  };
+  systemHealthScore: number;
+  activeAlerts: string[];
+  findings: string[];
+}
+
 export interface StudyPlanDay {
   dayNumber: number;
   topicName: string;
@@ -385,4 +411,17 @@ export interface StudyPlan {
   planTitle: string;
   subject: string;
   dailySchedule: StudyPlanDay[];
+}
+
+export interface PromoCampaignConfig {
+  isActive: boolean;
+  promoSpecialPriceUSD: number;
+  regularPriceUSD: number;
+  promoSpecialPriceZAR: number;
+  regularPriceZAR: number;
+  campaignName: string;
+  discountPercentage: number;
+  endsAt?: string;
+  broadcastsSent: number;
+  claimedPromoCount: number;
 }

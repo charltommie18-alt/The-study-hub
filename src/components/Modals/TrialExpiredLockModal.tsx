@@ -74,15 +74,33 @@ export const TrialExpiredLockModal: React.FC<TrialExpiredLockModalProps> = ({
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 space-y-1">
-              <div className="font-semibold text-xs text-amber-800 dark:text-amber-300">Official Payment Methods:</div>
-              <div className="flex justify-between">
-                <span>🇿🇦 <strong>Capitec Bank EFT:</strong> R89.00 / month</span>
-                <span className="font-mono text-[10px]">Acc: 2557334258</span>
+            {/* Special Promo Highlight Box */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-emerald-500/10 border-2 border-amber-400 dark:border-amber-600/80 text-[11px] text-amber-950 dark:text-amber-100 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  <span>🔥 Special Flash Deal Active (60% Off):</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase">
+                  $1.99 / mo
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span>🌍 <strong>PayPal / Card:</strong> $4.99 / month</span>
-                <span className="text-[10px]">Instant Card / PayPal</span>
+              <div className="flex justify-between items-center text-xs pt-1 border-t border-amber-200/60 dark:border-amber-800/60">
+                <span>🌍 <strong>PayPal / Debit Card:</strong></span>
+                <div className="text-right">
+                  <span className="line-through text-slate-400 text-[10px] mr-1.5">$4.99</span>
+                  <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-sm">$1.99 / mo</strong>
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span>🇿🇦 <strong>Capitec Bank EFT:</strong></span>
+                <div className="text-right">
+                  <span className="line-through text-slate-400 text-[10px] mr-1.5">R89.00</span>
+                  <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-sm">R35.00 / mo</strong>
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                Capitec Acc: <strong className="font-mono text-slate-800 dark:text-slate-200">2557334258</strong> • Instant clearance on PayPal/Card
               </div>
             </div>
           </div>
@@ -90,10 +108,10 @@ export const TrialExpiredLockModal: React.FC<TrialExpiredLockModalProps> = ({
           <div className="pt-2 space-y-2.5">
             <button
               onClick={onOpenPaymentModal}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 hover:from-red-700 hover:via-amber-700 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2"
             >
               <CreditCard className="w-4 h-4" />
-              <span>Subscribe & Unlock Account Now</span>
+              <span>Unlock Account for $1.99 Special Rate</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 

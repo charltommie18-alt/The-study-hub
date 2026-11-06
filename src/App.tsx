@@ -55,7 +55,7 @@ import { VoiceNarrationController } from './components/VoiceNarrationController'
 import { FloatingStudyTools } from './components/FloatingStudyTools';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
-import { Shield, Bell, Lock } from 'lucide-react';
+import { Shield, Bell, Lock, Flame, ArrowRight, Sparkles } from 'lucide-react';
 
 import { AddSubjectModal } from './components/Modals/AddSubjectModal';
 import { GeneratePlanModal } from './components/Modals/GeneratePlanModal';
@@ -501,9 +501,45 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-12">
+        {/* Special $1.99 Flash Promo Hero Banner for Non-Pro Users */}
+        {subscription.status !== 'active' && !isAdmin && (
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 pb-1">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs relative overflow-hidden border border-amber-300/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/30">
+                  <Flame className="w-4 h-4 text-amber-200 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-extrabold text-white text-xs sm:text-sm">
+                      ⚡ Special $1.99 / Month Subscription Active!
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-white text-red-600 font-black text-[10px] uppercase shadow-xs">
+                      Save 60%
+                    </span>
+                    <span className="text-[10px] text-amber-100 font-medium">
+                      (Regular $4.99 • ZAR Special R35.00/mo was R89)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/90 mt-0.5">
+                    Unlock all 14 AI tools, past exam papers, audio podcasts, and syllabus OCR at our limited-time special rate.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSubscriptionOpen(true)}
+                className="px-4 py-2 bg-white text-red-700 hover:bg-amber-50 font-extrabold rounded-xl shrink-0 cursor-pointer shadow-sm active:scale-95 transition-all text-xs flex items-center justify-center gap-1.5"
+              >
+                <span>Claim $1.99 Special Rate</span>
+                <ArrowRight className="w-3.5 h-3.5 text-red-700" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Friendly Payment & Proof Reminder Banner for Learners with Active/Expiring Trials */}
         {!isAdmin && (subscription.status === 'trial' || subscription.status === 'expired' || subscription.status === 'free') && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 pb-1">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-2 pb-1">
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-300 dark:border-amber-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
               <div className="flex items-start sm:items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -515,9 +551,12 @@ export default function App() {
                     <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-extrabold border border-amber-300 dark:border-amber-700">
                       {subscription.status === 'expired' ? 'Trial Expired' : `${trialDays} Days Left`}
                     </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 font-extrabold border border-red-300">
+                      $1.99 / R35 Special Active
+                    </span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                    Your trial is active or expiring soon! To keep uninterrupted access to all past exam memos &amp; AI summaries, please make your monthly payment (Capitec EFT R89 or PayPal/Card $4.99) and send proof of payment to <strong className="text-amber-700 dark:text-amber-400">charltommie18@gmail.com</strong>.
+                    Your trial is active or expiring soon! Take advantage of our flash promotion: pay the special <strong className="text-emerald-700 dark:text-emerald-400">$1.99 / month (PayPal/Card)</strong> or <strong className="text-emerald-700 dark:text-emerald-400">R35.00 / month (Capitec Bank Acc: 2557334258)</strong> and email your proof to <strong className="text-amber-700 dark:text-amber-400">charltommie18@gmail.com</strong>.
                   </p>
                 </div>
               </div>
@@ -525,7 +564,7 @@ export default function App() {
                 onClick={() => setIsSubscriptionOpen(true)}
                 className="px-4 py-2 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-700 hover:to-indigo-700 text-white font-bold rounded-xl shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all text-xs"
               >
-                Make Payment / Send Proof
+                Claim $1.99 / Send Proof
               </button>
             </div>
           </div>

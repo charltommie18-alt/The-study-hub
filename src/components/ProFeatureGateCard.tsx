@@ -132,14 +132,14 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
           <div className="p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-xs text-rose-950 dark:text-rose-200 mb-6 flex items-start gap-3">
             <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <strong>Trial Reset Prohibited:</strong> Logging out, creating a new session, or clearing storage will not reset your trial. To regain uninterrupted access, subscribe via Capitec Bank EFT (R89/mo) or PayPal/Card ($4.99/mo).
+              <strong>Trial Reset Prohibited:</strong> Logging out, creating a new session, or clearing storage will not reset your trial. To regain uninterrupted access, claim our <strong>Special $1.99 / month flash promotion</strong> via PayPal/Card or Capitec Bank EFT (R35.00/mo, was R89).
             </div>
           </div>
         ) : (
           <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs text-amber-950 dark:text-amber-200 mb-6 flex items-start gap-3">
             <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <strong>7-Day Free Trial Notice:</strong> You are currently on the trial tier with access to core basic study functions (Study Planner, Smart Flashcards, Focus Studio, Notes Summarizer, and Practice Quizzes). To access this advanced Pro tool, complete your payment details authorization.
+              <strong>7-Day Free Trial Notice:</strong> You are currently on the trial tier with access to core basic study functions. Activate full Pro access today at the <strong>special promotional rate of $1.99 / month (Save 60%)</strong> or Capitec EFT R35 / month.
             </div>
           </div>
         )}
@@ -158,10 +158,10 @@ export const ProFeatureGateCard: React.FC<ProFeatureGateCardProps> = ({
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             onClick={onOpenPaymentModal}
-            className={`w-full sm:w-auto px-6 py-3 ${isTrialExpired ? 'bg-gradient-to-r from-rose-600 via-amber-600 to-emerald-600' : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'} text-white text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2`}
+            className={`w-full sm:w-auto px-6 py-3 ${isTrialExpired ? 'bg-gradient-to-r from-rose-600 via-amber-600 to-emerald-600' : 'bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600'} text-white text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2`}
           >
             <Crown className="w-4 h-4 text-amber-200 fill-amber-200/30" />
-            <span>{isTrialExpired ? 'Subscribe & Unlock Account (R89 / $4.99)' : 'Enter Payment Details & Activate Pro'}</span>
+            <span>{isTrialExpired ? '⚡ Unlock Account for $1.99 Special Rate' : '⚡ Claim Special $1.99 / Month Rate'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

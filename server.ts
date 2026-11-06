@@ -297,6 +297,27 @@ app.get('/api/admin/daily-report', (req, res) => {
   }
 });
 
+// 12b. Run Real-Time Live System Scan (Audits all numbers & eliminates stuck legacy data)
+app.get('/api/admin/live-scan', (req, res) => {
+  try {
+    const scanReport = backendStore.runLiveScan();
+    res.json({ success: true, scanReport });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 12c. Purge Old Demo Records to Keep 100% Real Live Database
+app.post('/api/admin/purge-demo', (req, res) => {
+  try {
+    const result = backendStore.purgeDemoSubscribers();
+    const updatedScan = backendStore.runLiveScan();
+    res.json({ success: true, result, updatedScan });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 13. Verify Client-side User Subscription Status
 app.get('/api/user/subscription-status', (req, res) => {
   try {
@@ -381,6 +402,58 @@ app.post('/api/user/sync', (req, res) => {
       backendStore.recordActivity({ ip: clientIp, email, grade, activeTab });
     }
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 19. Special $1.99 Promotional Campaign Endpoints
+app.get('/api/promo/config', (req, res) => {
+  try {
+    const promo = backendStore.getPromoConfig();
+    res.json({ success: true, promo });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/promo/toggle', (req, res) => {
+  try {
+    const current = backendStore.getPromoConfig();
+    const updated = backendStore.updatePromoConfig({
+      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : !current.isActive,
+      ...(req.body.promoSpecialPriceUSD ? { promoSpecialPriceUSD: Number(req.body.promoSpecialPriceUSD) } : {}),
+      ...(req.body.promoSpecialPriceZAR ? { promoSpecialPriceZAR: Number(req.body.promoSpecialPriceZAR) } : {}),
+      ...(req.body.campaignName ? { campaignName: String(req.body.campaignName) } : {}),
+    });
+    res.json({ success: true, promo: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/promo/broadcast', (req, res) => {
+  try {
+    const { customMessage } = req.body || {};
+    const result = backendStore.broadcastSpecialPromo(customMessage);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/promo/claim', (req, res) => {
+  try {
+    const { email, paymentMethod, reference } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required to claim special promo.' });
+    }
+    const result = backendStore.claimSpecialPromo(
+      email,
+      paymentMethod || 'PayPal / Card',
+      reference || 'PROMO-199'
+    );
+    res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

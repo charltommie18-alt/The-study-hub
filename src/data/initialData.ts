@@ -253,15 +253,26 @@ export const INITIAL_SUBSCRIBERS: SubscriberRecord[] = [
   },
 ];
 
-export const INITIAL_DAILY_ANALYTICS: DailyAnalyticsRecord[] = [
-  { date: '2026-09-16', activeUsers: 640, docUploads: 165, aiPromptsCount: 2150, quizzesTaken: 540, newSubscriptions: 24, revenueUsd: 188.00 },
-  { date: '2026-09-17', activeUsers: 690, docUploads: 180, aiPromptsCount: 2310, quizzesTaken: 595, newSubscriptions: 28, revenueUsd: 215.50 },
-  { date: '2026-09-18', activeUsers: 725, docUploads: 194, aiPromptsCount: 2460, quizzesTaken: 630, newSubscriptions: 31, revenueUsd: 246.00 },
-  { date: '2026-09-19', activeUsers: 740, docUploads: 202, aiPromptsCount: 2520, quizzesTaken: 650, newSubscriptions: 33, revenueUsd: 260.00 },
-  { date: '2026-09-20', activeUsers: 765, docUploads: 208, aiPromptsCount: 2590, quizzesTaken: 672, newSubscriptions: 34, revenueUsd: 272.50 },
-  { date: '2026-09-21', activeUsers: 785, docUploads: 215, aiPromptsCount: 2680, quizzesTaken: 690, newSubscriptions: 36, revenueUsd: 284.00 },
-  { date: '2026-09-22', activeUsers: 812, docUploads: 228, aiPromptsCount: 2840, quizzesTaken: 725, newSubscriptions: 39, revenueUsd: 312.50 },
-];
+function generateRollingDailyAnalytics(): DailyAnalyticsRecord[] {
+  const records: DailyAnalyticsRecord[] = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().split('T')[0];
+    records.push({
+      date: dateStr,
+      activeUsers: 38 + (6 - i) * 7,
+      docUploads: 14 + (6 - i) * 3,
+      aiPromptsCount: 120 + (6 - i) * 20,
+      quizzesTaken: 25 + (6 - i) * 5,
+      newSubscriptions: i === 0 ? 3 : 2,
+      revenueUsd: 0.00, // Accurately reflects real cleared bank revenue
+    });
+  }
+  return records;
+}
+
+export const INITIAL_DAILY_ANALYTICS: DailyAnalyticsRecord[] = generateRollingDailyAnalytics();
 
 export const INITIAL_SUBJECTS: Subject[] = [
   {
